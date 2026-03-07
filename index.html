@@ -468,6 +468,7 @@ const CLOUD_SYNC = {
     reprogramada: 'manutencao_reprogramada'
   },
   saveTimers: {},
+  listeners: {},
   firebaseConfig: {
     apiKey: "AIzaSyBNajHs7TM8YEcIneqVE5q2zRG__azrgeo",
     authDomain: "dashboard-samarco.firebaseapp.com",
@@ -498,10 +499,27 @@ const CLOUD_SYNC = {
         type,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        items: []
+        items: [],
+        count: 0,
+        source: 'dashboard-samarco-web',
+        schemaVersion: 'cloud-v2'
       }, { merge: true })
     );
     await Promise.all(ops);
+  },
+  normalizeCloudItems(data) {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data.items)) return data.items;
+    if (Array.isArray(data.rows)) return data.rows;
+    if (Array.isArray(data.records)) return data.records;
+    if (data.items && typeof data.items === 'object') {
+      const keys = Object.keys(data.items);
+      if (keys.every(k => /^\d+$/.test(k))) {
+        return keys.sort((a,b) => Number(a) - Number(b)).map(k => data.items[k]);
+      }
+    }
+    return [];
   },
   serializeRecord(record) {
     const out = { ...record };
@@ -521,7 +539,7 @@ const CLOUD_SYNC = {
       const snap = await this.db.collection(collection).doc('state').get();
       if (!snap.exists) return [];
       const data = snap.data() || {};
-      const items = Array.isArray(data.items) ? data.items : [];
+      const items = this.normalizeCloudItems(data);
       return items.map(item => this.deserializeRecord(item));
     } catch (error) {
       console.warn('Falha ao ler nuvem de', type, error);
@@ -531,21 +549,51 @@ const CLOUD_SYNC = {
   async syncType(type) {
     const cloudItems = await this.loadFromCloud(type);
     if (cloudItems === null) return;
-    if (cloudItems.length > 0 || appState[type].data.length === 0) {
+    if (cloudItems.length > 0) {
       appState[type].data = cloudItems;
       appState[type].filtered = [...cloudItems];
       localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(appState[type].data));
       if (window.UI && typeof UI.updateFilters === 'function') UI.updateFilters(type);
       if (window.DataManager && typeof DataManager.applyFilters === 'function') DataManager.applyFilters(type);
-    } else if (appState[type].data.length > 0) {
+      return;
+    }
+    if (appState[type].data.length > 0) {
       this.queueSave(type, 50);
     }
+  },
+  applyRemoteState(type, items) {
+    appState[type].data = items;
+    appState[type].filtered = [...items];
+    localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(appState[type].data));
+    if (window.UI && typeof UI.updateFilters === 'function') UI.updateFilters(type);
+    if (window.DataManager && typeof DataManager.applyFilters === 'function') DataManager.applyFilters(type);
   },
   async syncAll() {
     if (!this.enabled) return;
     for (const type of Object.keys(this.collectionMap)) {
       await this.syncType(type);
     }
+  },
+  subscribeType(type) {
+    if (!this.enabled || this.listeners[type]) return;
+    const collection = this.collectionMap[type];
+    this.listeners[type] = this.db.collection(collection).doc('state').onSnapshot((snap) => {
+      if (!snap.exists) return;
+      const data = snap.data() || {};
+      const items = this.normalizeCloudItems(data).map(item => this.deserializeRecord(item));
+      if (!Array.isArray(items)) return;
+      const localJson = JSON.stringify((appState[type]?.data || []).map(item => this.serializeRecord(item)));
+      const remoteJson = JSON.stringify(items.map(item => this.serializeRecord(item)));
+      if (localJson !== remoteJson) {
+        this.applyRemoteState(type, items);
+      }
+    }, (error) => {
+      console.warn('Falha no listener da nuvem de', type, error);
+    });
+  },
+  subscribeAll() {
+    if (!this.enabled) return;
+    Object.keys(this.collectionMap).forEach(type => this.subscribeType(type));
   },
   queueSave(type, delay = 700) {
     if (!this.enabled) return;
@@ -854,6 +902,8 @@ const UI = {
     DataManager.applyFilters('reprogramada');
     await CLOUD_SYNC.init();
     await CLOUD_SYNC.syncAll();
+    CLOUD_SYNC.subscribeAll();
+    window.addEventListener('focus', () => { CLOUD_SYNC.syncAll(); });
   },
   setupEventListeners() {
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -868,6 +918,7 @@ const UI = {
       appState.preventiva.data.push(...newRows); 
       DataManager.save('preventiva'); 
       DataManager.applyFilters('preventiva');
+      if (window.CLOUD_SYNC && CLOUD_SYNC.enabled) await CLOUD_SYNC.saveType('preventiva');
       e.target.value = ''; 
       Utils.hideLoading(); 
       Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
@@ -887,6 +938,7 @@ const UI = {
       appState.manutencao.data.push(...newRows); 
       DataManager.save('manutencao'); 
       DataManager.applyFilters('manutencao');
+      if (window.CLOUD_SYNC && CLOUD_SYNC.enabled) await CLOUD_SYNC.saveType('manutencao');
       e.target.value = ''; 
       Utils.hideLoading(); 
       Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
@@ -906,6 +958,7 @@ const UI = {
       appState.corretiva.data.push(...newRows); 
       DataManager.save('corretiva'); 
       DataManager.applyFilters('corretiva');
+      if (window.CLOUD_SYNC && CLOUD_SYNC.enabled) await CLOUD_SYNC.saveType('corretiva');
       e.target.value = ''; 
       Utils.hideLoading(); 
       Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
@@ -925,6 +978,7 @@ const UI = {
       appState.reprogramada.data.push(...newRows); 
       DataManager.save('reprogramada'); 
       DataManager.applyFilters('reprogramada');
+      if (window.CLOUD_SYNC && CLOUD_SYNC.enabled) await CLOUD_SYNC.saveType('reprogramada');
       e.target.value = ''; 
       Utils.hideLoading(); 
       Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
