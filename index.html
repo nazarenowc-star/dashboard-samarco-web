@@ -1574,7 +1574,7 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
 })();
 </script>
 <!-- === END: Export PNG Paginado === -->
- <!-- SENSOR NAZA PORTAL - REALTIME DATABASE -->
+ <!-- SENSOR NAZA PORTAL - DADOS REAIS DO DASHBOARD SAMARCO -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
@@ -1592,28 +1592,132 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
     
     const SISTEMA_ID = 'producao';
     
+    function extrairDadosReais() {
+        // Tenta encontrar os valores na página
+        const dados = {
+            totalRegistros: 0,
+            realizados: 0,
+            pendentes: 0,
+            naoRealizados: 0,
+            percentualRealizado: 0
+        };
+        
+        // Procura por elementos que contenham os números
+        const elementos = document.querySelectorAll('*');
+        
+        elementos.forEach(el => {
+            const texto = el.textContent || '';
+            
+            // Total de Registros
+            if (texto.includes('TOTAL DE REGISTROS') || el.className?.includes('total')) {
+                const numero = texto.match(/\d+/);
+                if (numero) dados.totalRegistros = parseInt(numero[0]);
+            }
+            
+            // Realizados
+            if (texto.includes('REALIZADOS') && !texto.includes('NÃO')) {
+                const numero = texto.match(/\d+/);
+                if (numero) dados.realizados = parseInt(numero[0]);
+            }
+            
+            // Pendentes
+            if (texto.includes('PENDENTES')) {
+                const numero = texto.match(/\d+/);
+                if (numero) dados.pendentes = parseInt(numero[0]);
+            }
+            
+            // Não Realizados
+            if (texto.includes('NÃO REALIZADOS') || texto.includes('NAO REALIZADOS')) {
+                const numero = texto.match(/\d+/);
+                if (numero) dados.naoRealizados = parseInt(numero[0]);
+            }
+            
+            // % Realizado
+            if (texto.includes('% REALIZADO') || texto.includes('REALIZADO')) {
+                const numero = texto.match(/\d+/);
+                if (numero) dados.percentualRealizado = parseInt(numero[0]);
+            }
+        });
+        
+        // Se não encontrou nada (página ainda carregando), tenta extrair do innerText geral
+        if (dados.totalRegistros === 0) {
+            const textoPagina = document.body.innerText;
+            
+            // Regex para encontrar padrões comuns
+            const matchTotal = textoPagina.match(/TOTAL DE REGISTROS\s*(\d+)/i);
+            const matchRealizados = textoPagina.match(/REALIZADOS\s*(\d+)/i);
+            const matchPendentes = textoPagina.match(/PENDENTES\s*(\d+)/i);
+            const matchNaoRealizados = textoPagina.match(/N[ÃA]O REALIZADOS\s*(\d+)/i);
+            const matchPercentual = textoPagina.match(/% REALIZADO\s*(\d+)%?/i);
+            
+            if (matchTotal) dados.totalRegistros = parseInt(matchTotal[1]);
+            if (matchRealizados) dados.realizados = parseInt(matchRealizados[1]);
+            if (matchPendentes) dados.pendentes = parseInt(matchPendentes[1]);
+            if (matchNaoRealizados) dados.naoRealizados = parseInt(matchNaoRealizados[1]);
+            if (matchPercentual) dados.percentualRealizado = parseInt(matchPercentual[1]);
+        }
+        
+        // Se ainda não tem dados, aguarda a planilha carregar
+        if (dados.totalRegistros === 0 && dados.realizados === 0) {
+            console.log('⏳ Aguardando dados da planilha carregar...');
+            return null;
+        }
+        
+        // Calcula % realizado se não encontrou
+        if (dados.percentualRealizado === 0 && dados.totalRegistros > 0) {
+            dados.percentualRealizado = Math.round((dados.realizados / dados.totalRegistros) * 100);
+        }
+        
+        return dados;
+    }
+    
     function enviarDados() {
-        const hora = new Date().getHours();
-        const base = 65 + (hora / 24) * 30;
+        const dados = extrairDadosReais();
+        
+        if (!dados) {
+            console.log('⏳ Dados ainda não disponíveis, tentando novamente...');
+            return;
+        }
+        
+        // Formata valores para o portal
+        // [0] = % Realizado
+        // [1] = Total de OMs
+        // [2] = OMs Pendentes
         
         const valores = [
-            Math.min(100, base + (Math.random() - 0.5) * 5),
-            65000 + Math.floor(Math.random() * 15000),
-            80 + Math.floor(Math.random() * 15)
+            dados.percentualRealizado,
+            dados.totalRegistros,
+            dados.pendentes
         ];
         
         db.ref('sensores/' + SISTEMA_ID).set({
             sistema: SISTEMA_ID,
             valores: valores,
+            dadosCompletos: dados, // Envia todos os dados para referência
             timestamp: Date.now()
-        }).then(() => console.log('✅ [' + SISTEMA_ID.toUpperCase() + '] ONLINE:', valores.map(v => v.toFixed(1))))
-        .catch((err) => console.error('❌ Erro:', err));
+        }).then(() => {
+            console.log('✅ [PRODUCAO] OMs do SAP:', {
+                total: dados.totalRegistros,
+                realizadas: dados.realizados,
+                pendentes: dados.pendentes,
+                percentual: dados.percentualRealizado + '%'
+            });
+        }).catch((err) => {
+            console.error('❌ Erro:', err);
+        });
     }
     
+    // Tenta enviar a cada 30 segundos
     setInterval(enviarDados, 30000);
-    setTimeout(enviarDados, 2000);
-    console.log('🟢 Sensor ' + SISTEMA_ID + ' iniciado (Realtime Database)');
+    
+    // Primeira tentativa após 5 segundos (dá tempo da planilha carregar)
+    setTimeout(enviarDados, 5000);
+    
+    // Segunda tentativa após 10 segundos
+    setTimeout(enviarDados, 10000);
+    
+    console.log('🟢 Sensor Produção iniciado - Monitorando OMs do SAP');
 })();
-</script> 
+</script>
 </body>
 </html>
