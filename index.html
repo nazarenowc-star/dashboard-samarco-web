@@ -1593,79 +1593,79 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
     const SISTEMA_ID = 'producao';
     
     function extrairDadosReais() {
-        // Tenta encontrar os valores na página
+        // Objeto para armazenar os dados de todas as abas
         const dados = {
-            totalRegistros: 0,
-            realizados: 0,
-            pendentes: 0,
-            naoRealizados: 0,
-            percentualRealizado: 0
+            preventiva: {},
+            programada: {},
+            corretiva: {},
+            reprogramada: {},
+            consolidado: {
+                totalRegistros: 0,
+                areasDistintas: 0,
+                tagsDistintas: 0,
+                percentualRealizado: 0,
+                realizados: 0,
+                pendentes: 0,
+                naoRealizados: 0
+            }
         };
         
-        // Procura por elementos que contenham os números
-        const elementos = document.querySelectorAll('*');
+        // Tenta encontrar os cards na página atual
+        const cards = document.querySelectorAll('.card, .stat-card, [class*="stat"], [class*="metric"]');
         
-        elementos.forEach(el => {
-            const texto = el.textContent || '';
+        cards.forEach(card => {
+            const texto = card.innerText || '';
+            const numero = texto.match(/\d+/);
+            const valor = numero ? parseInt(numero[0]) : 0;
             
-            // Total de Registros
-            if (texto.includes('TOTAL DE REGISTROS') || el.className?.includes('total')) {
-                const numero = texto.match(/\d+/);
-                if (numero) dados.totalRegistros = parseInt(numero[0]);
-            }
-            
-            // Realizados
-            if (texto.includes('REALIZADOS') && !texto.includes('NÃO')) {
-                const numero = texto.match(/\d+/);
-                if (numero) dados.realizados = parseInt(numero[0]);
-            }
-            
-            // Pendentes
-            if (texto.includes('PENDENTES')) {
-                const numero = texto.match(/\d+/);
-                if (numero) dados.pendentes = parseInt(numero[0]);
-            }
-            
-            // Não Realizados
-            if (texto.includes('NÃO REALIZADOS') || texto.includes('NAO REALIZADOS')) {
-                const numero = texto.match(/\d+/);
-                if (numero) dados.naoRealizados = parseInt(numero[0]);
-            }
-            
-            // % Realizado
-            if (texto.includes('% REALIZADO') || texto.includes('REALIZADO')) {
-                const numero = texto.match(/\d+/);
-                if (numero) dados.percentualRealizado = parseInt(numero[0]);
+            // Identifica qual métrica é pelo texto
+            if (texto.includes('TOTAL DE REGISTROS')) {
+                dados.consolidado.totalRegistros = valor;
+            } else if (texto.includes('ÁREAS DISTINTAS')) {
+                dados.consolidado.areasDistintas = valor;
+            } else if (texto.includes('TAGS DISTINTAS')) {
+                dados.consolidado.tagsDistintas = valor;
+            } else if (texto.includes('% REALIZADO')) {
+                const percentual = texto.match(/(\d+)%/);
+                dados.consolidado.percentualRealizado = percentual ? parseInt(percentual[1]) : 0;
+            } else if (texto.includes('REALIZADOS') && !texto.includes('NÃO')) {
+                dados.consolidado.realizados = valor;
+            } else if (texto.includes('PENDENTES')) {
+                dados.consolidado.pendentes = valor;
+            } else if (texto.includes('NÃO REALIZADOS') || texto.includes('NAO REALIZADOS')) {
+                dados.consolidado.naoRealizados = valor;
             }
         });
         
-        // Se não encontrou nada (página ainda carregando), tenta extrair do innerText geral
-        if (dados.totalRegistros === 0) {
+        // Se não encontrou pelos cards, tenta pelo texto completo da página
+        if (dados.consolidado.totalRegistros === 0) {
             const textoPagina = document.body.innerText;
             
-            // Regex para encontrar padrões comuns
             const matchTotal = textoPagina.match(/TOTAL DE REGISTROS\s*(\d+)/i);
+            const matchAreas = textoPagina.match(/ÁREAS DISTINTAS\s*(\d+)/i);
+            const matchTags = textoPagina.match(/TAGS DISTINTAS\s*(\d+)/i);
+            const matchPercentual = textoPagina.match(/% REALIZADO\s*(\d+)%?/i);
             const matchRealizados = textoPagina.match(/REALIZADOS\s*(\d+)/i);
             const matchPendentes = textoPagina.match(/PENDENTES\s*(\d+)/i);
             const matchNaoRealizados = textoPagina.match(/N[ÃA]O REALIZADOS\s*(\d+)/i);
-            const matchPercentual = textoPagina.match(/% REALIZADO\s*(\d+)%?/i);
             
-            if (matchTotal) dados.totalRegistros = parseInt(matchTotal[1]);
-            if (matchRealizados) dados.realizados = parseInt(matchRealizados[1]);
-            if (matchPendentes) dados.pendentes = parseInt(matchPendentes[1]);
-            if (matchNaoRealizados) dados.naoRealizados = parseInt(matchNaoRealizados[1]);
-            if (matchPercentual) dados.percentualRealizado = parseInt(matchPercentual[1]);
+            if (matchTotal) dados.consolidado.totalRegistros = parseInt(matchTotal[1]);
+            if (matchAreas) dados.consolidado.areasDistintas = parseInt(matchAreas[1]);
+            if (matchTags) dados.consolidado.tagsDistintas = parseInt(matchTags[1]);
+            if (matchPercentual) dados.consolidado.percentualRealizado = parseInt(matchPercentual[1]);
+            if (matchRealizados) dados.consolidado.realizados = parseInt(matchRealizados[1]);
+            if (matchPendentes) dados.consolidado.pendentes = parseInt(matchPendentes[1]);
+            if (matchNaoRealizados) dados.consolidado.naoRealizados = parseInt(matchNaoRealizados[1]);
         }
         
-        // Se ainda não tem dados, aguarda a planilha carregar
-        if (dados.totalRegistros === 0 && dados.realizados === 0) {
-            console.log('⏳ Aguardando dados da planilha carregar...');
-            return null;
-        }
-        
-        // Calcula % realizado se não encontrou
-        if (dados.percentualRealizado === 0 && dados.totalRegistros > 0) {
-            dados.percentualRealizado = Math.round((dados.realizados / dados.totalRegistros) * 100);
+        // Verifica qual aba está ativa
+        const abaAtiva = document.querySelector('.active, .selected, [class*="active"]');
+        if (abaAtiva) {
+            const textoAba = abaAtiva.innerText || '';
+            if (textoAba.includes('Preventiva')) dados.abaAtiva = 'preventiva';
+            else if (textoAba.includes('Programada')) dados.abaAtiva = 'programada';
+            else if (textoAba.includes('Corretiva')) dados.abaAtiva = 'corretiva';
+            else if (textoAba.includes('Reprogramada')) dados.abaAtiva = 'reprogramada';
         }
         
         return dados;
@@ -1673,50 +1673,49 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
     
     function enviarDados() {
         const dados = extrairDadosReais();
+        const c = dados.consolidado;
         
-        if (!dados) {
-            console.log('⏳ Dados ainda não disponíveis, tentando novamente...');
+        // Verifica se encontrou dados válidos
+        if (c.totalRegistros === 0 && c.realizados === 0) {
+            console.log('⏳ Nenhum dado encontrado na página. Aguardando importação...');
             return;
         }
         
         // Formata valores para o portal
         // [0] = % Realizado
-        // [1] = Total de OMs
-        // [2] = OMs Pendentes
-        
+        // [1] = Total de Registros (OMs)
+        // [2] = Pendentes
         const valores = [
-            dados.percentualRealizado,
-            dados.totalRegistros,
-            dados.pendentes
+            c.percentualRealizado || 0,
+            c.totalRegistros || 0,
+            c.pendentes || 0
         ];
         
+        // Envia para o Firebase
         db.ref('sensores/' + SISTEMA_ID).set({
             sistema: SISTEMA_ID,
             valores: valores,
-            dadosCompletos: dados, // Envia todos os dados para referência
+            dadosCompletos: c, // Todos os dados detalhados
+            abaAtiva: dados.abaAtiva || 'desconhecida',
             timestamp: Date.now()
         }).then(() => {
             console.log('✅ [PRODUCAO] OMs do SAP:', {
-                total: dados.totalRegistros,
-                realizadas: dados.realizados,
-                pendentes: dados.pendentes,
-                percentual: dados.percentualRealizado + '%'
+                total: c.totalRegistros,
+                realizadas: c.realizados,
+                pendentes: c.pendentes,
+                percentual: c.percentualRealizado + '%',
+                aba: dados.abaAtiva
             });
         }).catch((err) => {
-            console.error('❌ Erro:', err);
+            console.error('❌ Erro ao enviar:', err);
         });
     }
     
-    // Tenta enviar a cada 30 segundos
+    // Envia imediatamente e a cada 30 segundos
+    setTimeout(enviarDados, 3000); // Aguarda 3s para página carregar
     setInterval(enviarDados, 30000);
     
-    // Primeira tentativa após 5 segundos (dá tempo da planilha carregar)
-    setTimeout(enviarDados, 5000);
-    
-    // Segunda tentativa após 10 segundos
-    setTimeout(enviarDados, 10000);
-    
-    console.log('🟢 Sensor Produção iniciado - Monitorando OMs do SAP');
+    console.log('🟢 Sensor Produção iniciado - Monitorando OMs reais do SAP');
 })();
 </script>
 </body>
