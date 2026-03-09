@@ -1574,14 +1574,15 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
 })();
 </script>
 <!-- === END: Export PNG Paginado === -->
-  <!-- SENSOR NAZA PORTAL - DASHBOARD SAMARCO (CORRIGIDO) -->
+    <!-- SENSOR NAZA PORTAL - DASHBOARD SAMARCO (CORRIGIDO - COM SUPORTE A REALTIME) -->
 <script>
 (function() {
     console.log('🔄 Iniciando sensor do Dashboard Samarco...');
     
     const SISTEMA_ID = 'producao';
-    const MAX_TENTATIVAS = 30; // 30 segundos no total
+    const MAX_TENTATIVAS = 30;
     let tentativas = 0;
+    let usandoFirestore = false;
     
     const firebaseConfig = {
         apiKey: "AIzaSyDneReMjO78JqJ-LvmSTiQqUMkxT97H6JE",
@@ -1589,6 +1590,24 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
         databaseURL: "https://naza-auditoria-hub-default-rtdb.firebaseio.com",
         projectId: "naza-auditoria-hub",
     };
+    
+    // Função para carregar script dinamicamente
+    function carregarScriptRealtime() {
+        return new Promise((resolve, reject) => {
+            // Verifica se já está carregado
+            if (typeof firebase !== 'undefined' && firebase.database) {
+                resolve();
+                return;
+            }
+            
+            console.log('📦 Carregando Firebase Realtime Database...');
+            const script = document.createElement('script');
+            script.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
     
     function extrairNumeroElemento(id) {
         const el = document.getElementById(id);
@@ -1608,7 +1627,6 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
     
     function coletarDadosReais() {
         try {
-            // Verifica qual aba está ativa
             let abaAtiva = 'preventiva';
             const tabs = document.querySelectorAll('.tab-btn');
             for (const tab of tabs) {
@@ -1618,22 +1636,11 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
                 }
             }
             
-            // Define os prefixos baseado na aba ativa
-            let prefix = 'prev';
             let K = 'Prev';
+            if (abaAtiva === 'manutencao') K = 'Mp';
+            else if (abaAtiva === 'corretiva') K = 'Mc';
+            else if (abaAtiva === 'reprogramada') K = 'Mr';
             
-            if (abaAtiva === 'manutencao') {
-                prefix = 'mp';
-                K = 'Mp';
-            } else if (abaAtiva === 'corretiva') {
-                prefix = 'mc';
-                K = 'Mc';
-            } else if (abaAtiva === 'reprogramada') {
-                prefix = 'mr';
-                K = 'Mr';
-            }
-            
-            // Extrai dados dos elementos HTML
             const total = extrairNumeroElemento('kpi' + K + 'Count');
             const areas = extrairNumeroElemento('kpi' + K + 'Areas');
             const tags = extrairNumeroElemento('kpi' + K + 'Tags');
@@ -1645,35 +1652,10 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
             
             if (abaAtiva === 'reprogramada') {
                 pendentes = extrairNumeroElemento('kpi' + K + 'Pending');
-                const reprogramados = extrairNumeroElemento('kpi' + K + 'Reprogramado');
-                // Para reprogramada, consideramos reprogramados como "não realizados" para o cálculo
-                naoRealizados = reprogramados;
+                naoRealizados = extrairNumeroElemento('kpi' + K + 'Reprogramado');
             } else {
                 pendentes = extrairNumeroElemento('kpi' + K + 'Pending');
                 naoRealizados = extrairNumeroElemento('kpi' + K + 'NotDone');
-            }
-            
-            // Se não encontrou pelos KPIs, tenta pelo conteúdo da página
-            if (total === 0) {
-                const kpiElements = document.querySelectorAll('.kpi');
-                kpiElements.forEach(kpi => {
-                    const label = kpi.querySelector('.label')?.textContent || '';
-                    const value = kpi.querySelector('.value')?.textContent || '';
-                    
-                    if (label.includes('Total')) {
-                        const match = value.match(/\d+/);
-                        if (match) total = parseInt(match[0]);
-                    } else if (label.includes('%')) {
-                        const match = value.match(/(\d+)%/);
-                        if (match) percentual = parseInt(match[1]);
-                    } else if (label.includes('Realizados')) {
-                        const match = value.match(/\d+/);
-                        if (match) realizados = parseInt(match[0]);
-                    } else if (label.includes('Pendentes')) {
-                        const match = value.match(/\d+/);
-                        if (match) pendentes = parseInt(match[0]);
-                    }
-                });
             }
             
             return {
@@ -1702,10 +1684,9 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
         }
     }
     
-    function tentarIniciarSensor() {
+    async function tentarIniciarSensor() {
         tentativas++;
         
-        // Verifica se o Firebase está disponível
         if (typeof firebase === 'undefined') {
             if (tentativas < MAX_TENTATIVAS) {
                 console.log(`⏳ Aguardando Firebase... (${tentativas}/${MAX_TENTATIVAS})`);
@@ -1713,15 +1694,12 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
                 return;
             } else {
                 console.log('⚠️ Firebase não disponível - operando em modo local');
-                // Mesmo sem Firebase, mostra os dados no console para debug
                 setInterval(() => {
                     const dados = coletarDadosReais();
-                    console.log('📊 Dados do Dashboard (local):', {
+                    console.log('📊 Dados locais:', {
                         total: dados.totalRegistros,
                         realizadas: dados.realizados,
-                        pendentes: dados.pendentes,
-                        percentual: dados.percentualRealizado + '%',
-                        aba: dados.abaAtiva
+                        percentual: dados.percentualRealizado + '%'
                     });
                 }, 30000);
                 return;
@@ -1729,34 +1707,43 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
         }
         
         try {
-            console.log('✅ Firebase detectado, inicializando...');
-            
-            // Inicializa Firebase (usa app padrão ou cria novo)
+            // Inicializa app Firebase se necessário
             let app;
-            try {
-                if (!firebase.apps.length) {
-                    app = firebase.initializeApp(firebaseConfig);
-                } else {
-                    app = firebase.app();
-                }
-            } catch (e) {
-                console.error('❌ Erro ao inicializar Firebase:', e);
-                return;
+            if (!firebase.apps.length) {
+                app = firebase.initializeApp(firebaseConfig);
+            } else {
+                app = firebase.app();
             }
             
-            const db = firebase.database();
-            console.log('✅ Database conectado');
+            // Tenta usar Realtime Database primeiro
+            let db;
+            try {
+                if (firebase.database) {
+                    db = firebase.database();
+                    console.log('✅ Realtime Database conectado');
+                    usandoFirestore = false;
+                } else {
+                    // Se não tiver database, tenta carregar o script
+                    await carregarScriptRealtime();
+                    db = firebase.database();
+                    console.log('✅ Realtime Database carregado e conectado');
+                    usandoFirestore = false;
+                }
+            } catch (e) {
+                console.warn('⚠️ Realtime Database não disponível, usando Firestore como fallback');
+                // Fallback para Firestore
+                db = firebase.firestore();
+                usandoFirestore = true;
+            }
             
             function enviarDados() {
                 const dados = coletarDadosReais();
                 
-                // Verifica se encontrou dados válidos
                 if (dados.totalRegistros === 0 && dados.realizados === 0) {
                     console.log('⏳ Nenhum dado encontrado. Aguardando importação...');
                     return;
                 }
                 
-                // Formata valores para o portal
                 const payload = {
                     sistema: SISTEMA_ID,
                     valores: [
@@ -1779,17 +1766,30 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
                     timestamp: Date.now()
                 };
                 
-                db.ref('sensores/' + SISTEMA_ID).set(payload)
-                    .then(() => {
-                        console.log('🟢 [PRODUCAO] Dados enviados:', {
-                            total: dados.totalRegistros,
-                            realizadas: dados.realizados,
-                            pendentes: dados.pendentes,
-                            percentual: dados.percentualRealizado + '%',
-                            aba: dados.abaAtiva
-                        });
-                    })
-                    .catch(err => console.error('❌ Erro no envio:', err));
+                if (usandoFirestore) {
+                    // Usa Firestore
+                    db.collection('sensores').doc(SISTEMA_ID).set(payload)
+                        .then(() => {
+                            console.log('🟢 [Firestore] Dados enviados:', {
+                                total: dados.totalRegistros,
+                                realizadas: dados.realizados,
+                                percentual: dados.percentualRealizado + '%'
+                            });
+                        })
+                        .catch(err => console.error('❌ Erro no Firestore:', err));
+                } else {
+                    // Usa Realtime Database
+                    db.ref('sensores/' + SISTEMA_ID).set(payload)
+                        .then(() => {
+                            console.log('🟢 [Realtime] Dados enviados:', {
+                                total: dados.totalRegistros,
+                                realizadas: dados.realizados,
+                                percentual: dados.percentualRealizado + '%',
+                                aba: dados.abaAtiva
+                            });
+                        })
+                        .catch(err => console.error('❌ Erro no Realtime:', err));
+                }
             }
             
             // Primeiro envio após 3 segundos
@@ -1797,20 +1797,23 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
             // Depois a cada 30 segundos
             setInterval(enviarDados, 30000);
             
-            console.log('✅ Sensor Produção operacional!');
+            console.log(`✅ Sensor Produção operacional! (usando ${usandoFirestore ? 'Firestore' : 'Realtime Database'})`);
             
         } catch (e) {
             console.error('❌ Erro crítico no sensor:', e);
+            // Tenta novamente em 5 segundos
+            setTimeout(tentarIniciarSensor, 5000);
         }
     }
     
-    // Inicia o processo após a página carregar
+    // Inicia o processo
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => setTimeout(tentarIniciarSensor, 1500));
     } else {
         setTimeout(tentarIniciarSensor, 1500);
     }
 })();
+</script>
 </script>
 </body>
 </html>
