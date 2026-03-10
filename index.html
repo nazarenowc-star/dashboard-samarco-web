@@ -456,7 +456,7 @@ let appState = {
   currentTab: 'preventiva'
 };
 
-// ==================== FIREBASE / NUVEM (CORRIGIDO) ====================
+// ==================== FIREBASE / NUVEM ====================
 const CLOUD_SYNC = {
   enabled: false,
   db: null,
@@ -485,7 +485,6 @@ const CLOUD_SYNC = {
       if (!firebase.apps.length) firebase.initializeApp(this.firebaseConfig);
       this.db = firebase.firestore();
       this.enabled = true;
-      console.log('🔥 Firebase Firestore conectado');
       await this.bootstrapCollections();
       return true;
     } catch (error) {
@@ -547,58 +546,27 @@ const CLOUD_SYNC = {
       return null;
     }
   },
-  
-  // 🎯 FUNÇÃO CORRIGIDA: Aplica dados da nuvem e força atualização da interface
-  applyRemoteState(type, items) {
-    console.log(`🔄 Aplicando dados remotos para ${type}:`, items.length, 'registros');
-    
-    // Atualiza o estado
-    appState[type].data = items;
-    appState[type].filtered = [...items];
-    
-    // Salva no localStorage para persistência local
-    localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(appState[type].data));
-    
-    // 🚨 IMPORTANTE: Atualiza a interface imediatamente
-    if (window.UI) {
-      // Atualiza os filtros (dropdowns de área/tag)
-      if (typeof UI.updateFilters === 'function') {
-        UI.updateFilters(type);
-      }
-      
-      // 🎯 Aplica filtros e atualiza TUDO (tabela, KPIs, gráficos)
-      if (typeof DataManager.applyFilters === 'function') {
-        DataManager.applyFilters(type);
-      } else {
-        // Fallback se applyFilters não estiver disponível
-        UI.updateTable(type);
-        UI.updateKPIs(type);
-        UI.updateCharts(type);
-      }
-    }
-    
-    console.log(`✅ Interface atualizada para ${type}`);
-  },
-
   async syncType(type) {
     const cloudItems = await this.loadFromCloud(type);
-    
-    if (cloudItems === null) {
-      console.log(`⚠️ Não foi possível carregar ${type} da nuvem`);
-      return;
-    }
-    
+    if (cloudItems === null) return;
     if (cloudItems.length > 0) {
-      console.log(`☁️ Dados encontrados na nuvem para ${type}:`, cloudItems.length);
-      this.applyRemoteState(type, cloudItems);
+      appState[type].data = cloudItems;
+      appState[type].filtered = [...cloudItems];
+      localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(appState[type].data));
+      if (window.UI && typeof UI.updateFilters === 'function') UI.updateFilters(type);
+      if (window.DataManager && typeof DataManager.applyFilters === 'function') DataManager.applyFilters(type);
       return;
     }
-    
-    // Se não há dados na nuvem mas há dados locais, sobe para nuvem
     if (appState[type].data.length > 0) {
-      console.log(`📤 Subindo dados locais para nuvem (${type}):`, appState[type].data.length);
       this.queueSave(type, 50);
     }
+  },
+  applyRemoteState(type, items) {
+    appState[type].data = items;
+    appState[type].filtered = [...items];
+    localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(appState[type].data));
+    if (window.UI && typeof UI.updateFilters === 'function') UI.updateFilters(type);
+    if (window.DataManager && typeof DataManager.applyFilters === 'function') DataManager.applyFilters(type);
   },
   async syncAll() {
     if (!this.enabled) return;
@@ -617,7 +585,6 @@ const CLOUD_SYNC = {
       const localJson = JSON.stringify((appState[type]?.data || []).map(item => this.serializeRecord(item)));
       const remoteJson = JSON.stringify(items.map(item => this.serializeRecord(item)));
       if (localJson !== remoteJson) {
-        console.log(`📡 Atualização em tempo real detectada para ${type}`);
         this.applyRemoteState(type, items);
       }
     }, (error) => {
@@ -648,7 +615,6 @@ const CLOUD_SYNC = {
         updatedAtClient: new Date().toISOString(),
         source: 'dashboard-samarco-web'
       }, { merge: true });
-      console.log(`💾 Dados salvos na nuvem (${type}):`, items.length);
     } catch (error) {
       console.warn('Falha ao salvar nuvem de', type, error);
     }
@@ -724,15 +690,6 @@ const Utils = {
     const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); 
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  },
-  escapeHtml(text) {
-    if (!text) return '';
-    return String(text)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
   }
 };
 
@@ -812,7 +769,6 @@ const DataManager = {
       const data = JSON.parse(localStorage.getItem(key) || '[]');
       appState[type].data = data.map(r => ({...r, DATA: r.DATA ? new Date(r.DATA) : null }));
       appState[type].filtered = [...appState[type].data];
-      console.log(`📂 Dados carregados do localStorage (${type}):`, appState[type].data.length);
       if (window.UI && typeof UI.updateFilters === 'function') UI.updateFilters(type);
     } catch { 
       appState[type].data = []; 
@@ -932,53 +888,22 @@ const DataManager = {
   }
 };
 
-// ==================== INTERFACE DO USUÁRIO (CORRIGIDO) ====================
+// ==================== INTERFACE DO USUÁRIO ====================
 const UI = {
   async init() {
-    console.log('🚀 Inicializando Dashboard...');
     this.setupEventListeners();
-    
-    // Carrega do localStorage primeiro
     DataManager.load('preventiva'); 
     DataManager.load('manutencao'); 
     DataManager.load('corretiva');
     DataManager.load('reprogramada');
-    
-    // Aplica filtros iniciais (mesmo que vazio, para preparar a estrutura)
     DataManager.applyFilters('preventiva'); 
     DataManager.applyFilters('manutencao'); 
     DataManager.applyFilters('corretiva');
     DataManager.applyFilters('reprogramada');
-    
-    // Inicializa Firebase
     await CLOUD_SYNC.init();
-    
-    // Sincroniza com a nuvem - ESTA É A CHAVE
     await CLOUD_SYNC.syncAll();
-    
-    // 🎯 FORÇA atualização final da interface após sincronização
-    setTimeout(() => {
-      console.log('🎨 Forçando atualização final da interface...');
-      ['preventiva', 'manutencao', 'corretiva', 'reprogramada'].forEach(type => {
-        if (appState[type].data.length > 0) {
-          UI.updateFilters(type);
-          UI.updateTable(type);
-          UI.updateKPIs(type);
-          UI.updateCharts(type);
-        }
-      });
-    }, 500);
-    
-    // Subscribe para atualizações em tempo real
     CLOUD_SYNC.subscribeAll();
-    
-    // Recarrega quando a janela ganha foco
-    window.addEventListener('focus', () => { 
-      console.log('👁️ Janela em foco, sincronizando...');
-      CLOUD_SYNC.syncAll(); 
-    });
-
-    console.log('✅ Dashboard inicializado com sucesso!');
+    window.addEventListener('focus', () => { CLOUD_SYNC.syncAll(); });
   },
   setupEventListeners() {
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -1306,7 +1231,9 @@ const UI = {
       tagCount[t] = (tagCount[t] || 0) + 1; 
     }
     
+    // MODIFICAÇÃO AQUI: Mostrar TODOS os equipamentos, não apenas os top 10
     const sorted = Object.entries(tagCount).sort((a, b) => b[1] - a[1]);
+    // Remover o .slice(0, 10) para mostrar todos os equipamentos
     const labels = sorted.map(t => t[0]); 
     const values = sorted.map(t => t[1]);
     const total = values.reduce((s, v) => s + v, 0); 
@@ -1648,245 +1575,5 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
 </script>
 <!-- === END: Export PNG Paginado === -->
 
-<!-- SENSOR NAZA PORTAL - DASHBOARD SAMARCO -->
-<script>
-(function() {
-    console.log('🔄 Iniciando sensor do Dashboard Samarco...');
-    
-    const SISTEMA_ID = 'producao';
-    const MAX_TENTATIVAS = 30;
-    let tentativas = 0;
-    let usandoFirestore = false;
-    
-    const firebaseConfig = {
-        apiKey: "AIzaSyDneReMjO78JqJ-LvmSTiQqUMkxT97H6JE",
-        authDomain: "naza-auditoria-hub.firebaseapp.com",
-        databaseURL: "https://naza-auditoria-hub-default-rtdb.firebaseio.com",
-        projectId: "naza-auditoria-hub",
-    };
-    
-    // Função para carregar script dinamicamente
-    function carregarScriptRealtime() {
-        return new Promise((resolve, reject) => {
-            // Verifica se já está carregado
-            if (typeof firebase !== 'undefined' && firebase.database) {
-                resolve();
-                return;
-            }
-            
-            console.log('📦 Carregando Firebase Realtime Database...');
-            const script = document.createElement('script');
-            script.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js';
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-        });
-    }
-    
-    function extrairNumeroElemento(id) {
-        const el = document.getElementById(id);
-        if (!el) return 0;
-        const texto = el.textContent || '';
-        const match = texto.match(/\d+/);
-        return match ? parseInt(match[0]) : 0;
-    }
-    
-    function extrairPercentualElemento(id) {
-        const el = document.getElementById(id);
-        if (!el) return 0;
-        const texto = el.textContent || '';
-        const match = texto.match(/(\d+)%/);
-        return match ? parseInt(match[1]) : 0;
-    }
-    
-    function coletarDadosReais() {
-        try {
-            let abaAtiva = 'preventiva';
-            const tabs = document.querySelectorAll('.tab-btn');
-            for (const tab of tabs) {
-                if (tab.classList.contains('active')) {
-                    if (tab.dataset.tab) abaAtiva = tab.dataset.tab;
-                    break;
-                }
-            }
-            
-            let K = 'Prev';
-            if (abaAtiva === 'manutencao') K = 'Mp';
-            else if (abaAtiva === 'corretiva') K = 'Mc';
-            else if (abaAtiva === 'reprogramada') K = 'Mr';
-            
-            const total = extrairNumeroElemento('kpi' + K + 'Count');
-            const areas = extrairNumeroElemento('kpi' + K + 'Areas');
-            const tags = extrairNumeroElemento('kpi' + K + 'Tags');
-            const percentual = extrairPercentualElemento('kpi' + K + 'Rate');
-            const realizados = extrairNumeroElemento('kpi' + K + 'Done');
-            
-            let pendentes = 0;
-            let naoRealizados = 0;
-            
-            if (abaAtiva === 'reprogramada') {
-                pendentes = extrairNumeroElemento('kpi' + K + 'Pending');
-                naoRealizados = extrairNumeroElemento('kpi' + K + 'Reprogramado');
-            } else {
-                pendentes = extrairNumeroElemento('kpi' + K + 'Pending');
-                naoRealizados = extrairNumeroElemento('kpi' + K + 'NotDone');
-            }
-            
-            return {
-                totalRegistros: total || 0,
-                areasDistintas: areas || 0,
-                tagsDistintas: tags || 0,
-                percentualRealizado: percentual || 0,
-                realizados: realizados || 0,
-                pendentes: pendentes || 0,
-                naoRealizados: naoRealizados || 0,
-                abaAtiva: abaAtiva
-            };
-            
-        } catch (e) {
-            console.warn('Erro ao coletar dados:', e);
-            return {
-                totalRegistros: 0,
-                areasDistintas: 0,
-                tagsDistintas: 0,
-                percentualRealizado: 0,
-                realizados: 0,
-                pendentes: 0,
-                naoRealizados: 0,
-                abaAtiva: 'preventiva'
-            };
-        }
-    }
-    
-    async function tentarIniciarSensor() {
-        tentativas++;
-        
-        if (typeof firebase === 'undefined') {
-            if (tentativas < MAX_TENTATIVAS) {
-                console.log(`⏳ Aguardando Firebase... (${tentativas}/${MAX_TENTATIVAS})`);
-                setTimeout(tentarIniciarSensor, 1000);
-                return;
-            } else {
-                console.log('⚠️ Firebase não disponível - operando em modo local');
-                setInterval(() => {
-                    const dados = coletarDadosReais();
-                    console.log('📊 Dados locais:', {
-                        total: dados.totalRegistros,
-                        realizadas: dados.realizados,
-                        percentual: dados.percentualRealizado + '%'
-                    });
-                }, 30000);
-                return;
-            }
-        }
-        
-        try {
-            // Inicializa app Firebase se necessário
-            let app;
-            if (!firebase.apps.length) {
-                app = firebase.initializeApp(firebaseConfig);
-            } else {
-                app = firebase.app();
-            }
-            
-            // Tenta usar Realtime Database primeiro
-            let db;
-            try {
-                if (firebase.database) {
-                    db = firebase.database();
-                    console.log('✅ Realtime Database conectado');
-                    usandoFirestore = false;
-                } else {
-                    // Se não tiver database, tenta carregar o script
-                    await carregarScriptRealtime();
-                    db = firebase.database();
-                    console.log('✅ Realtime Database carregado e conectado');
-                    usandoFirestore = false;
-                }
-            } catch (e) {
-                console.warn('⚠️ Realtime Database não disponível, usando Firestore como fallback');
-                // Fallback para Firestore
-                db = firebase.firestore();
-                usandoFirestore = true;
-            }
-            
-            function enviarDados() {
-                const dados = coletarDadosReais();
-                
-                if (dados.totalRegistros === 0 && dados.realizados === 0) {
-                    console.log('⏳ Nenhum dado encontrado. Aguardando importação...');
-                    return;
-                }
-                
-                const payload = {
-                    sistema: SISTEMA_ID,
-                    valores: [
-                        dados.percentualRealizado || 0,
-                        dados.totalRegistros || 0,
-                        dados.pendentes || 0
-                    ],
-                    dadosCompletos: {
-                        total: dados.totalRegistros,
-                        realizadas: dados.realizados,
-                        pendentes: dados.pendentes,
-                        naoRealizados: dados.naoRealizados,
-                        areasDistintas: dados.areasDistintas,
-                        tagsDistintas: dados.tagsDistintas,
-                        percentual: dados.percentualRealizado,
-                        abaAtiva: dados.abaAtiva,
-                        timestamp: Date.now(),
-                        dataHora: new Date().toLocaleString('pt-BR')
-                    },
-                    timestamp: Date.now()
-                };
-                
-                if (usandoFirestore) {
-                    // Usa Firestore
-                    db.collection('sensores').doc(SISTEMA_ID).set(payload)
-                        .then(() => {
-                            console.log('🟢 [Firestore] Dados enviados:', {
-                                total: dados.totalRegistros,
-                                realizadas: dados.realizados,
-                                percentual: dados.percentualRealizado + '%'
-                            });
-                        })
-                        .catch(err => console.error('❌ Erro no Firestore:', err));
-                } else {
-                    // Usa Realtime Database
-                    db.ref('sensores/' + SISTEMA_ID).set(payload)
-                        .then(() => {
-                            console.log('🟢 [Realtime] Dados enviados:', {
-                                total: dados.totalRegistros,
-                                realizadas: dados.realizados,
-                                percentual: dados.percentualRealizado + '%',
-                                aba: dados.abaAtiva
-                            });
-                        })
-                        .catch(err => console.error('❌ Erro no Realtime:', err));
-                }
-            }
-            
-            // Primeiro envio após 3 segundos
-            setTimeout(enviarDados, 3000);
-            // Depois a cada 30 segundos
-            setInterval(enviarDados, 30000);
-            
-            console.log(`✅ Sensor Produção operacional! (usando ${usandoFirestore ? 'Firestore' : 'Realtime Database'})`);
-            
-        } catch (e) {
-            console.error('❌ Erro crítico no sensor:', e);
-            // Tenta novamente em 5 segundos
-            setTimeout(tentarIniciarSensor, 5000);
-        }
-    }
-    
-    // Inicia o processo
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => setTimeout(tentarIniciarSensor, 1500));
-    } else {
-        setTimeout(tentarIniciarSensor, 1500);
-    }
-})();
-</script>
 </body>
 </html>
