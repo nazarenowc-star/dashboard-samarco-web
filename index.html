@@ -1,1819 +1,399 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dashboard Samarco — Versão Corrigida</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --brand: #004c97;
-      --accent: #1aa06d;
-      --ink: #0f172a;
-      --muted: #6b7280;
-      --line: #e5e7eb;
-      --bg: #f7fafb;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --danger: #ef4444;
-    }
-    html, body {
-      background: var(--bg);
-      color: var(--ink);
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      font-size: 14px;
-    }
-    .app-card {
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(2, 14, 33, 0.06);
-      transition: box-shadow 0.3s ease;
-    }
-    .app-card:hover { box-shadow: 0 8px 24px rgba(2, 14, 33, 0.1); }
-    .tab-btn {
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 0.75rem 1.25rem;
-      background: #fff;
-      color: var(--brand);
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-    .tab-btn:hover { background: #f8fafc; border-color: var(--brand); }
-    .tab-btn.active {
-      background: linear-gradient(180deg, #e7f1ff, #ffffff);
-      border-color: #c7e0ff;
-      box-shadow: 0 2px 8px rgba(0, 76, 151, 0.15);
-    }
-    thead th {
-      position: sticky; top: 0; background: #f3f7ff; z-index: 2;
-      font-weight: 700; font-size: 0.8rem; text-transform: uppercase;
-      letter-spacing: 0.5px; padding: 0.75rem 0.5rem; border-bottom: 2px solid var(--brand);
-    }
-    .kpi {
-      border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.25rem;
-      background: #fff; min-width: 140px; text-align: center; transition: transform 0.3s, box-shadow 0.3s;
-    }
-    .kpi:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .kpi .label { font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: .5rem; }
-    .kpi .value { font-weight: 800; font-size: 1.75rem; color: var(--accent); line-height: 1; }
-    .table-container { border: 1px solid var(--line); border-radius: 12px; overflow: auto; max-height: 65vh; background: #fff; }
-    .table { margin-bottom: 0; }
-    .table tbody tr { transition: background-color 0.2s ease; }
-    .table tbody tr:hover { background-color: #f8fafc; }
-    .table td { padding: 0.75rem 0.5rem; font-size: 0.85rem; vertical-align: middle; }
-    .badge-status { padding: 0.35rem 0.75rem; border-radius: 999px; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .5px; }
-    .badge-realizado { background: #d1fae5; color: #065f46; }
-    .badge-nao-realizado { background: #fee2e2; color: #991b1b; }
-    .badge-pendente { background: #fef3c7; color: #92400e; }
-    .badge-reprogramado { background: #e0e7ff; color: #3730a3; }
-    canvas { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
-    .chip { border: 1px solid var(--line); background: #fff; color: var(--brand); border-radius: 999px; padding: 0.35rem 0.85rem; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: .5rem; }
-    #loading { position: fixed; inset: 0; background: rgba(255,255,255,0.9); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
-    #loading.show { display: flex; }
-    .btn { transition: all 0.3s ease; font-weight: 600; }
-    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
-    .controls-section { background: #f8fafc; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
-    .filter-section { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
-    .chart-container { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
-    .chart-title { font-weight: 700; font-size: 0.95rem; color: var(--brand); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: .5px; }
-    .form-label { font-weight: 600; font-size: 0.8rem; color: var(--ink); margin-bottom: 0.35rem; }
-    .form-control, .form-select { border-radius: 8px; border: 1px solid var(--line); font-size: 0.85rem; }
-    .form-control:focus, .form-select:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(0,76,151,0.1); }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Dashboard Samarco — Versão Corrigida</title>
 
-  <style>
-    .page-capture{width:1400px;height:990px;box-sizing:border-box;padding:24px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;display:flex;flex-direction:column;gap:12px;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-    .page-row{display:flex;gap:12px}.page-col{flex:1 1 0}.page-title{font-weight:800;color:#004c97;font-size:22px;margin:0}.page-sub{color:#6b7280;font-size:13px;margin:0}
-    .chart-grid{display:grid;grid-template-columns:1fr 1fr;grid-gap:12px}.chart-card{border:1px solid #e5e7eb;border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px}
-    .chart-card h6{margin:0;font-size:12px;color:#004c97;text-transform:uppercase;letter-spacing:.5px}.chart-img{width:100%;height:100%;object-fit:contain}
-    .table-mini{width:100%;border-collapse:collapse;font-size:12px}.table-mini th,.table-mini td{border:1px solid #e5e7eb;padding:6px 8px;text-align:left;vertical-align:top}
-    .page-footer{margin-top:auto;font-size:11px;color:#6b7280;display:flex;justify-content:space-between}
-    #_offscreen_pageroot{position:fixed;left:-99999px;top:-99999px;width:0;height:0;overflow:hidden}
-    .kpi .label{font-size:11px}.kpi .value{font-size:22px}
-  </style>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+--brand:#004c97;
+--accent:#1aa06d;
+--ink:#0f172a;
+--muted:#6b7280;
+--line:#e5e7eb;
+--bg:#f7fafb;
+--success:#10b981;
+--warning:#f59e0b;
+--danger:#ef4444;
+}
+
+html,body{
+background:var(--bg);
+color:var(--ink);
+font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+font-size:14px;
+}
+
+.app-card{
+background:#fff;
+border:1px solid var(--line);
+border-radius:12px;
+padding:16px;
+margin-bottom:16px;
+}
+
+.kpi{
+font-size:28px;
+font-weight:800;
+}
+
+.kpi-label{
+color:var(--muted);
+font-size:12px;
+}
+
+.navbar-brand{
+font-weight:800;
+letter-spacing:.5px;
+}
+
+.table td,.table th{
+vertical-align:middle;
+}
+
+</style>
 </head>
+
 <body>
-<div id="loading">
-  <div class="text-center">
-    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-    <div class="mt-3 fw-bold fs-5" style="color: var(--brand)">Processando planilhas…</div>
-  </div>
+
+<nav class="navbar navbar-dark" style="background:var(--brand)">
+<div class="container-fluid">
+
+<span class="navbar-brand">
+<i class="fa-solid fa-industry"></i>
+Dashboard OMs Samarco
+</span>
+
+</div>
+</nav>
+
+
+<div class="container-fluid mt-3">
+
+<div class="row">
+
+<div class="col-md-3">
+<div class="app-card">
+<div class="kpi" id="kpi-total-preventiva">0</div>
+<div class="kpi-label">Total Preventiva</div>
+</div>
 </div>
 
-<div class="container-fluid py-4">
-  <!-- Header -->
-  <div class="d-flex align-items-center justify-content-between app-card p-3 mb-4">
-    <div class="d-flex align-items-center gap-3">
-      <i class="fa-solid fa-chart-line fs-2" style="color: var(--brand)"></i>
-      <div>
-        <h1 class="h4 m-0" style="color: var(--brand)">Dashboard Samarco</h1>
-        <p class="text-muted m-0" style="font-size: 0.85rem;">Gestão de Programação — Preventiva, Manutenção e Reprogramada</p>
-      </div>
-    </div>
-    <div class="d-flex gap-2">
-      <button id="btnBackup" class="btn btn-outline-secondary btn-sm">
-        <i class="fa-solid fa-download"></i> Backup JSON
-      </button>
-      <label class="btn btn-outline-secondary btn-sm mb-0">
-        <i class="fa-solid fa-upload"></i> Restaurar JSON
-        <input id="restoreInput" type="file" accept=".json" hidden/>
-      </label>
-    </div>
-  </div>
-
-  <!-- Tabs -->
-  <div class="d-flex gap-3 mb-4">
-    <button class="tab-btn active" data-tab="preventiva" type="button">
-      <i class="fa-solid fa-broom"></i> Programação Preventiva
-    </button>
-    <button class="tab-btn" data-tab="manutencao" type="button">
-      <i class="fa-solid fa-screwdriver-wrench"></i> Manutenção Programada
-    </button>
-    <button class="tab-btn" data-tab="corretiva" type="button">
-      <i class="fa-solid fa-gear"></i> Manutenção Corretiva
-    </button>
-    <button class="tab-btn" data-tab="reprogramada" type="button">
-      <i class="fa-solid fa-calendar-week"></i> Manutenção Reprogramada
-    </button>
-  </div>
-
-  <!-- Preventiva Tab -->
-  <div id="tab-preventiva" class="tab-content" style="display: block">
-    <div class="app-card p-4">
-      <!-- Controls -->
-      <div class="controls-section">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <span class="chip">
-              <i class="fa-regular fa-file-excel"></i> Planilhas (Preventiva)
-            </span>
-            <label class="btn btn-sm btn-primary mb-0" style="background: var(--brand); border-color: var(--brand);">
-              <i class="fa-solid fa-file-arrow-up"></i> Importar Excel
-              <input id="inputPrev" type="file" accept=".xlsx,.xls" hidden multiple/>
-            </label>
-            <button id="btnPrevCSV" class="btn btn-sm btn-outline-secondary">
-              <i class="fa-solid fa-file-export"></i> Exportar CSV
-            </button>
-            <button id="btnPrevExportPNG" class="btn btn-sm btn-outline-info">
-              <i class="fa-solid fa-image"></i> Exportar PNG
-            </button>
-          </div>
-          <div class="d-flex flex-wrap gap-2">
-            <button id="btnPrevDeleteSel" class="btn btn-sm btn-outline-danger">
-              <i class="fa-solid fa-trash"></i> Excluir Selecionados
-            </button>
-            <button id="btnPrevDeleteAll" class="btn btn-sm btn-danger">
-              <i class="fa-regular fa-trash-can"></i> Excluir Tudo
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- KPIs -->
-      <div class="d-flex flex-wrap gap-3 mb-4">
-        <div class="kpi"><div class="label">Total de Registros</div><div id="kpiPrevCount" class="value">0</div></div>
-        <div class="kpi"><div class="label">Áreas Distintas</div><div id="kpiPrevAreas" class="value">0</div></div>
-        <div class="kpi"><div class="label">Tags Distintas</div><div id="kpiPrevTags" class="value">0</div></div>
-        <div class="kpi"><div class="label">% Realizado</div><div id="kpiPrevRate" class="value">0%</div></div>
-        <div class="kpi"><div class="label">Realizados</div><div id="kpiPrevDone" class="value" style="color: var(--success);">0</div></div>
-        <div class="kpi"><div class="label">Pendentes</div><div id="kpiPrevPending" class="value" style="color: var(--warning);">0</div></div>
-        <div class="kpi"><div class="label">Não Realizados</div><div id="kpiPrevNotDone" class="value" style="color: var(--danger);">0</div></div>
-      </div>
-
-      <div class="row g-4">
-        <div class="col-12 col-xl-5">
-          <div class="filter-section mb-3">
-            <h6 class="chart-title mb-3"><i class="fa-solid fa-filter"></i> Filtros</h6>
-            <div class="row g-2">
-              <div class="col-6"><label class="form-label">Data (início)</label><input id="prevDateStart" type="date" class="form-control form-control-sm"></div>
-              <div class="col-6"><label class="form-label">Data (fim)</label><input id="prevDateEnd" type="date" class="form-control form-control-sm"></div>
-              <div class="col-4"><label class="form-label">Área</label><select id="prevArea" class="form-select form-select-sm"><option value="">Todas</option></select></div>
-              <div class="col-4"><label class="form-label">Tag</label><select id="prevTag" class="form-select form-select-sm"><option value="">Todas</option></select></div>
-              <div class="col-4"><label class="form-label">Situação</label><select id="prevSituacao" class="form-select form-select-sm"><option value="">Todas</option><option>REALIZADO</option><option>NÃO REALIZADO</option><option>PENDENTE</option></select></div>
-              <div class="col-12 d-flex gap-2 mt-3">
-                <button id="prevClear" class="btn btn-sm btn-secondary flex-grow-1"><i class="fa-solid fa-rotate"></i> Limpar Filtros</button>
-                <button id="prevRefresh" class="btn btn-sm btn-primary flex-grow-1" style="background: var(--brand); border-color: var(--brand);"><i class="fa-solid fa-filter"></i> Aplicar Filtros</button>
-              </div>
-            </div>
-          </div>
-          <div class="table-container">
-            <table class="table table-sm table-hover align-middle">
-              <thead><tr id="preventivaHead"></tr></thead>
-              <tbody id="preventivaBody"></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="col-12 col-xl-7">
-          <div class="row g-3">
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-bar"></i> Distribuição por Área</h6><div style="height: 240px"><canvas id="prevByArea"></canvas></div></div></div>
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-line"></i> Linha do Tempo</h6><div style="height: 240px"><canvas id="prevTimeline"></canvas></div></div></div>
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-column"></i> Análise de Pareto por Tag</h6><div style="height: 280px"><canvas id="prevPareto"></canvas></div></div></div>
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-pie"></i> Status das Atividades</h6><div style="height: 240px"><canvas id="prevStatus"></canvas></div></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Manutenção Programada Tab -->
-  <div id="tab-manutencao" class="tab-content" style="display:none">
-    <div class="app-card p-4">
-      <div class="controls-section">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <span class="chip"><i class="fa-regular fa-file-excel"></i> Planilhas (Manutenção)</span>
-            <label class="btn btn-sm btn-primary mb-0" style="background: var(--brand); border-color: var(--brand);"><i class="fa-solid fa-file-arrow-up"></i> Importar Excel<input id="inputMP" type="file" accept=".xlsx,.xls" hidden multiple/></label>
-            <button id="btnMPCSV" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-file-export"></i> Exportar CSV</button>
-            <button id="btnMPExportPNG" class="btn btn-sm btn-outline-info"><i class="fa-solid fa-image"></i> Exportar PNG</button>
-          </div>
-          <div class="d-flex flex-wrap gap-2">
-            <button id="btnMpDeleteSel" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i> Excluir Selecionados</button>
-            <button id="btnMpDeleteAll" class="btn btn-sm btn-danger"><i class="fa-regular fa-trash-can"></i> Excluir Tudo</button>
-          </div>
-        </div>
-      </div>
-      <div class="d-flex flex-wrap gap-3 mb-4">
-        <div class="kpi"><div class="label">Total de Registros</div><div id="kpiMpCount" class="value">0</div></div>
-        <div class="kpi"><div class="label">Áreas Distintas</div><div id="kpiMpAreas" class="value">0</div></div>
-        <div class="kpi"><div class="label">Tags Distintas</div><div id="kpiMpTags" class="value">0</div></div>
-        <div class="kpi"><div class="label">% Realizado</div><div id="kpiMpRate" class="value">0%</div></div>
-        <div class="kpi"><div class="label">Realizados</div><div id="kpiMpDone" class="value" style="color: var(--success);">0</div></div>
-        <div class="kpi"><div class="label">Pendentes</div><div id="kpiMpPending" class="value" style="color: var(--warning);">0</div></div>
-        <div class="kpi"><div class="label">Não Realizados</div><div id="kpiMpNotDone" class="value" style="color: var(--danger);">0</div></div>
-      </div>
-      <div class="row g-4">
-        <div class="col-12 col-xl-5">
-          <div class="filter-section mb-3">
-            <h6 class="chart-title mb-3"><i class="fa-solid fa-filter"></i> Filtros</h6>
-            <div class="row g-2">
-              <div class="col-6"><label class="form-label">Data (início)</label><input id="mpDateStart" type="date" class="form-control form-control-sm"></div>
-              <div class="col-6"><label class="form-label">Data (fim)</label><input id="mpDateEnd" type="date" class="form-control form-control-sm"></div>
-              <div class="col-4"><label class="form-label">Área</label><select id="mpArea" class="form-select form-select-sm"><option value="">Todas</option></select></div>
-              <div class="col-4"><label class="form-label">Tag</label><select id="mpTag" class="form-select form-select-sm"><option value="">Todas</option></select></div>
-              <div class="col-4"><label class="form-label">Situação</label><select id="mpSituacao" class="form-select form-select-sm"><option value="">Todas</option><option>REALIZADO</option><option>NÃO REALIZADO</option><option>PENDENTE</option></select></div>
-              <div class="col-12 d-flex gap-2 mt-3">
-                <button id="mpClear" class="btn btn-sm btn-secondary flex-grow-1"><i class="fa-solid fa-rotate"></i> Limpar Filtros</button>
-                <button id="mpRefresh" class="btn btn-sm btn-primary flex-grow-1" style="background: var(--brand); border-color: var(--brand);"><i class="fa-solid fa-filter"></i> Aplicar Filtros</button>
-              </div>
-            </div>
-          </div>
-          <div class="table-container">
-            <table class="table table-sm table-hover align-middle">
-              <thead><tr id="manutencaoHead"></tr></thead>
-              <tbody id="manutencaoBody"></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="col-12 col-xl-7">
-          <div class="row g-3">
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-bar"></i> Distribuição por Área</h6><div style="height: 240px"><canvas id="mpByArea"></canvas></div></div></div>
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-line"></i> Linha do Tempo</h6><div style="height: 240px"><canvas id="mpTimeline"></canvas></div></div></div>
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-column"></i> Análise de Pareto por Tag</h6><div style="height: 280px"><canvas id="mpPareto"></canvas></div></div></div>
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-pie"></i> Status das Atividades</h6><div style="height: 240px"><canvas id="mpStatus"></canvas></div></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Manutenção Corretiva Tab -->
-  <div id="tab-corretiva" class="tab-content" style="display:none">
-    <div class="app-card p-4">
-      <div class="controls-section">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <span class="chip"><i class="fa-regular fa-file-excel"></i> Planilhas (Corretiva)</span>
-            <label class="btn btn-sm btn-primary mb-0" style="background: var(--brand); border-color: var(--brand);"><i class="fa-solid fa-file-arrow-up"></i> Importar Excel<input id="inputMC" type="file" accept=".xlsx,.xls" hidden multiple/></label>
-            <button id="btnMCCSV" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-file-export"></i> Exportar CSV</button>
-            <button id="btnMCExportPNG" class="btn btn-sm btn-outline-info"><i class="fa-solid fa-image"></i> Exportar PNG</button>
-          </div>
-          <div class="d-flex flex-wrap gap-2">
-            <button id="btnMcDeleteSel" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i> Excluir Selecionados</button>
-            <button id="btnMcDeleteAll" class="btn btn-sm btn-danger"><i class="fa-regular fa-trash-can"></i> Excluir Tudo</button>
-          </div>
-        </div>
-      </div>
-      <div class="d-flex flex-wrap gap-3 mb-4">
-        <div class="kpi"><div class="label">Total de Registros</div><div id="kpiMcCount" class="value">0</div></div>
-        <div class="kpi"><div class="label">Áreas Distintas</div><div id="kpiMcAreas" class="value">0</div></div>
-        <div class="kpi"><div class="label">Tags Distintas</div><div id="kpiMcTags" class="value">0</div></div>
-        <div class="kpi"><div class="label">% Realizado</div><div id="kpiMcRate" class="value">0%</div></div>
-        <div class="kpi"><div class="label">Realizados</div><div id="kpiMcDone" class="value" style="color: var(--success);">0</div></div>
-        <div class="kpi"><div class="label">Pendentes</div><div id="kpiMcPending" class="value" style="color: var(--warning);">0</div></div>
-        <div class="kpi"><div class="label">Não Realizados</div><div id="kpiMcNotDone" class="value" style="color: var(--danger);">0</div></div>
-      </div>
-      <div class="row g-4">
-        <div class="col-12 col-xl-5">
-          <div class="filter-section mb-3">
-            <h6 class="chart-title mb-3"><i class="fa-solid fa-filter"></i> Filtros</h6>
-            <div class="row g-2">
-              <div class="col-6"><label class="form-label">Data (início)</label><input id="mcDateStart" type="date" class="form-control form-control-sm"></div>
-              <div class="col-6"><label class="form-label">Data (fim)</label><input id="mcDateEnd" type="date" class="form-control form-control-sm"></div>
-              <div class="col-4"><label class="form-label">Área</label><select id="mcArea" class="form-select form-select-sm"><option value="">Todas</option></select></div>
-              <div class="col-4"><label class="form-label">Tag</label><select id="mcTag" class="form-select form-select-sm"><option value="">Todas</option></select></div>
-              <div class="col-4"><label class="form-label">Situação</label><select id="mcSituacao" class="form-select form-select-sm"><option value="">Todas</option><option>REALIZADO</option><option>NÃO REALIZADO</option><option>PENDENTE</option></select></div>
-              <div class="col-12 d-flex gap-2 mt-3">
-                <button id="mcClear" class="btn btn-sm btn-secondary flex-grow-1"><i class="fa-solid fa-rotate"></i> Limpar Filtros</button>
-                <button id="mcRefresh" class="btn btn-sm btn-primary flex-grow-1" style="background: var(--brand); border-color: var(--brand);"><i class="fa-solid fa-filter"></i> Aplicar Filtros</button>
-              </div>
-            </div>
-          </div>
-          <div class="table-container">
-            <table class="table table-sm table-hover align-middle">
-              <thead><tr id="corretivaHead"></tr></thead>
-              <tbody id="corretivaBody"></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="col-12 col-xl-7">
-          <div class="row g-3">
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-bar"></i> Distribuição por Área</h6><div style="height: 240px"><canvas id="mcByArea"></canvas></div></div></div>
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-line"></i> Linha do Tempo</h6><div style="height: 240px"><canvas id="mcTimeline"></canvas></div></div></div>
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-column"></i> Análise de Pareto por Tag</h6><div style="height: 280px"><canvas id="mcPareto"></canvas></div></div></div>
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-pie"></i> Status das Atividades</h6><div style="height: 240px"><canvas id="mcStatus"></canvas></div></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Manutenção Reprogramada Tab -->
-  <div id="tab-reprogramada" class="tab-content" style="display:none">
-    <div class="app-card p-4">
-      <div class="controls-section">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <span class="chip"><i class="fa-regular fa-file-excel"></i> Planilhas (Reprogramada)</span>
-            <label class="btn btn-sm btn-primary mb-0" style="background: var(--brand); border-color: var(--brand);"><i class="fa-solid fa-file-arrow-up"></i> Importar Excel<input id="inputMR" type="file" accept=".xlsx,.xls" hidden multiple/></label>
-            <button id="btnMRCSV" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-file-export"></i> Exportar CSV</button>
-            <button id="btnMRExportPNG" class="btn btn-sm btn-outline-info"><i class="fa-solid fa-image"></i> Exportar PNG</button>
-          </div>
-          <div class="d-flex flex-wrap gap-2">
-            <button id="btnMrDeleteSel" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i> Excluir Selecionados</button>
-            <button id="btnMrDeleteAll" class="btn btn-sm btn-danger"><i class="fa-regular fa-trash-can"></i> Excluir Tudo</button>
-          </div>
-        </div>
-      </div>
-      <div class="d-flex flex-wrap gap-3 mb-4">
-        <div class="kpi"><div class="label">Total de Registros</div><div id="kpiMrCount" class="value">0</div></div>
-        <div class="kpi"><div class="label">Áreas Distintas</div><div id="kpiMrAreas" class="value">0</div></div>
-        <div class="kpi"><div class="label">Tags Distintas</div><div id="kpiMrTags" class="value">0</div></div>
-        <div class="kpi"><div class="label">% Realizado</div><div id="kpiMrRate" class="value">0%</div></div>
-        <div class="kpi"><div class="label">Realizados</div><div id="kpiMrDone" class="value" style="color: var(--success);">0</div></div>
-        <div class="kpi"><div class="label">Pendentes</div><div id="kpiMrPending" class="value" style="color: var(--warning);">0</div></div>
-        <div class="kpi"><div class="label">Reprogramados</div><div id="kpiMrReprogramado" class="value" style="color: #3730a3;">0</div></div>
-      </div>
-      <div class="row g-4">
-        <div class="col-12 col-xl-5">
-          <div class="filter-section mb-3">
-            <h6 class="chart-title mb-3"><i class="fa-solid fa-filter"></i> Filtros</h6>
-            <div class="row g-2">
-              <div class="col-6"><label class="form-label">Data (início)</label><input id="mrDateStart" type="date" class="form-control form-control-sm"></div>
-              <div class="col-6"><label class="form-label">Data (fim)</label><input id="mrDateEnd" type="date" class="form-control form-control-sm"></div>
-              <div class="col-4"><label class="form-label">Área</label><select id="mrArea" class="form-select form-select-sm"><option value="">Todas</option></select></div>
-              <div class="col-4"><label class="form-label">Tag</label><select id="mrTag" class="form-select form-select-sm"><option value="">Todas</option></select></div>
-              <div class="col-4"><label class="form-label">Situação</label><select id="mrSituacao" class="form-select form-select-sm"><option value="">Todas</option><option>REPROGRAMADO</option></select></div>
-              <div class="col-12 d-flex gap-2 mt-3">
-                <button id="mrClear" class="btn btn-sm btn-secondary flex-grow-1"><i class="fa-solid fa-rotate"></i> Limpar Filtros</button>
-                <button id="mrRefresh" class="btn btn-sm btn-primary flex-grow-1" style="background: var(--brand); border-color: var(--brand);"><i class="fa-solid fa-filter"></i> Aplicar Filtros</button>
-              </div>
-            </div>
-          </div>
-          <div class="table-container">
-            <table class="table table-sm table-hover align-middle">
-              <thead><tr id="reprogramadaHead"></tr></thead>
-              <tbody id="reprogramadaBody"></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="col-12 col-xl-7">
-          <div class="row g-3">
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-bar"></i> Distribuição por Área</h6><div style="height: 240px"><canvas id="mrByArea"></canvas></div></div></div>
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-line"></i> Linha do Tempo</h6><div style="height: 240px"><canvas id="mrTimeline"></canvas></div></div></div>
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-column"></i> Análise de Pareto por Tag</h6><div style="height: 280px"><canvas id="mrPareto"></canvas></div></div></div>
-            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-pie"></i> Status das Atividades</h6><div style="height: 240px"><canvas id="mrStatus"></canvas></div></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+<div class="col-md-3">
+<div class="app-card">
+<div class="kpi" id="kpi-concluidas-preventiva">0</div>
+<div class="kpi-label">Concluídas</div>
+</div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<div class="col-md-3">
+<div class="app-card">
+<div class="kpi" id="kpi-andamento-preventiva">0</div>
+<div class="kpi-label">Em Andamento</div>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="app-card">
+<div class="kpi" id="kpi-pendentes-preventiva">0</div>
+<div class="kpi-label">Pendentes</div>
+</div>
+</div>
+
+</div>
+
+
+<div class="app-card">
+
+<div class="row mb-2">
+
+<div class="col-md-3">
+<input id="filter-text-preventiva" class="form-control form-control-sm" placeholder="buscar"/>
+</div>
+
+<div class="col-md-2">
+<select id="filter-area-preventiva" class="form-select form-select-sm">
+<option value="">Área</option>
+</select>
+</div>
+
+<div class="col-md-2">
+<select id="filter-tag-preventiva" class="form-select form-select-sm">
+<option value="">TAG</option>
+</select>
+</div>
+
+</div>
+
+<div class="table-responsive">
+
+<table class="table table-sm table-striped" id="table-preventiva">
+<thead>
+
+<tr>
+<th>OM</th>
+<th>Área</th>
+<th>TAG</th>
+<th>Status</th>
+<th>Descrição</th>
+</tr>
+
+</thead>
+
+<tbody></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+
 
 <script>
-// ==================== CONFIGURAÇÃO ====================
-const CONFIG = {
-  STORAGE_KEYS: {
-    PREVENTIVA: 'samarco_prev_data',
-    MANUTENCAO: 'samarco_mp_data',
-    CORRETIVA: 'samarco_mc_data',
-    REPROGRAMADA: 'samarco_mr_data'
-  },
-  COLUMN_MAPPING: {
-    DATA: ['DATA', 'Data', 'data', 'DT'],
-    AREA: ['ÁREA', 'AREA', 'Area', 'Setor', 'LOCAL', 'Local', 'Mina', 'MINA'],
-    TAG: ['TAG', 'Tag', 'Equipamento', 'EQUIP', 'EQUIPAMENTO'],
-    ESPECIFICACAO: ['ESPECIFICAÇÃO', 'Especificação', 'Especificacao', 'ESPECIFICACAO', 'SERVIÇO', 'SERVICO', 'ATIVIDADE'],
-    SITUACAO: ['SITUAÇÃO', 'SITUACAO', 'Situação', 'Status', 'STATUS'],
-    SEMANA: ['SEMANA', 'Semana', 'SEMANA DO MÊS', 'SEMANA DO MES'],
-    OM: ['OM', 'Nº OM', 'ORDEM', 'ORDEM DE MANUTENÇÃO', 'ORDEM MANUTENÇÃO', 'N° OM'],
-    MES: ['MÊS', 'MES', 'Mês', 'Mes'],
-    DIA: ['DIA', 'Dia'],
-    DURACAO: ['DURAÇÃO', 'DURACAO', 'Duração'],
-    RESPONSAVEL: ['RESPONSÁVEL', 'RESPONSAVEL', 'Responsável'],
-    OBSERVACAO: ['OBSERVAÇÃO', 'OBSERVACAO', 'Observação', 'OBS']
-  },
-  COLORS: {
-    brand: '#004c97',
-    accent: '#1aa06d',
-    success: '#10b981',
-    warning: '#f59e0b',
-    danger: '#ef4444',
-    reprogramado: '#3730a3',
-    chartColors: [
-      '#004c97', '#1aa06d', '#f59e0b', '#ef4444', '#8b5cf6',
-      '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
-    ]
-  }
+
+/* UTIL */
+
+const Utils={
+escapeHtml(str){
+if(!str) return '';
+return String(str)
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;");
+}
 };
 
-// ==================== ESTADO DA APLICAÇÃO ====================
-let appState = {
-  preventiva: { data: [], filtered: [], charts: {} },
-  manutencao: { data: [], filtered: [], charts: {} },
-  corretiva:  { data: [], filtered: [], charts: {} },
-  reprogramada: { data: [], filtered: [], charts: {} },
-  currentTab: 'preventiva'
+
+/* CONFIG */
+
+const CONFIG={
+STORAGE_KEYS:{
+PREVENTIVA:"oms_preventiva"
+}
 };
 
-// ==================== FIREBASE / NUVEM ====================
-const CLOUD_SYNC = {
-  enabled: false,
-  db: null,
-  initialized: false,
-  collectionMap: {
-    preventiva: 'preventiva',
-    manutencao: 'manutencao_programada',
-    corretiva: 'manutencao_corretiva',
-    reprogramada: 'manutencao_reprogramada'
-  },
-  saveTimers: {},
-  listeners: {},
-  firebaseConfig: {
-    apiKey: "AIzaSyBNajHs7TM8YEcIneqVE5q2zRG__azrgeo",
-    authDomain: "dashboard-samarco.firebaseapp.com",
-    projectId: "dashboard-samarco",
-    storageBucket: "dashboard-samarco.firebasestorage.app",
-    messagingSenderId: "61590124044",
-    appId: "1:61590124044:web:4a29cc3cf74dc5bb426029"
-  },
-  async init() {
-    if (this.initialized) return this.enabled;
-    this.initialized = true;
-    try {
-      if (!window.firebase || !firebase.firestore) throw new Error('Firebase indisponível');
-      if (!firebase.apps.length) firebase.initializeApp(this.firebaseConfig);
-      this.db = firebase.firestore();
-      this.enabled = true;
-      await this.bootstrapCollections();
-      return true;
-    } catch (error) {
-      console.warn('Firebase não inicializado. Operando somente local.', error);
-      this.enabled = false;
-      return false;
-    }
-  },
-  async bootstrapCollections() {
-    const ops = Object.entries(this.collectionMap).map(([type, collection]) =>
-      this.db.collection(collection).doc('state').set({
-        type,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        items: [],
-        count: 0,
-        source: 'dashboard-samarco-web',
-        schemaVersion: 'cloud-v2'
-      }, { merge: true })
-    );
-    await Promise.all(ops);
-  },
-  normalizeCloudItems(data) {
-    if (!data) return [];
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data.items)) return data.items;
-    if (Array.isArray(data.rows)) return data.rows;
-    if (Array.isArray(data.records)) return data.records;
-    if (data.items && typeof data.items === 'object') {
-      const keys = Object.keys(data.items);
-      if (keys.every(k => /^\d+$/.test(k))) {
-        return keys.sort((a,b) => Number(a) - Number(b)).map(k => data.items[k]);
-      }
-    }
-    return [];
-  },
-  serializeRecord(record) {
-    const out = { ...record };
-    if (out.DATA instanceof Date) out.DATA = out.DATA.toISOString();
-    else if (out.DATA && typeof out.DATA?.toDate === 'function') out.DATA = out.DATA.toDate().toISOString();
-    return out;
-  },
-  deserializeRecord(record) {
-    const out = { ...record };
-    if (out.DATA) out.DATA = new Date(out.DATA);
-    return out;
-  },
-  async loadFromCloud(type) {
-    if (!this.enabled) return null;
-    try {
-      const collection = this.collectionMap[type];
-      const snap = await this.db.collection(collection).doc('state').get();
-      if (!snap.exists) return [];
-      const data = snap.data() || {};
-      const items = this.normalizeCloudItems(data);
-      return items.map(item => this.deserializeRecord(item));
-    } catch (error) {
-      console.warn('Falha ao ler nuvem de', type, error);
-      return null;
-    }
-  },
-  async syncType(type) {
-    const cloudItems = await this.loadFromCloud(type);
-    if (cloudItems === null) return;
-    if (cloudItems.length > 0) {
-      appState[type].data = cloudItems;
-      appState[type].filtered = [...cloudItems];
-      localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(appState[type].data));
-      if (window.UI && typeof UI.updateFilters === 'function') UI.updateFilters(type);
-      if (window.DataManager && typeof DataManager.applyFilters === 'function') DataManager.applyFilters(type);
-      return;
-    }
-    if (appState[type].data.length > 0) {
-      this.queueSave(type, 50);
-    }
-  },
-  applyRemoteState(type, items) {
-    appState[type].data = items;
-    appState[type].filtered = [...items];
-    localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(appState[type].data));
-    if (window.UI && typeof UI.updateFilters === 'function') UI.updateFilters(type);
-    if (window.DataManager && typeof DataManager.applyFilters === 'function') DataManager.applyFilters(type);
-  },
-  async syncAll() {
-    if (!this.enabled) return;
-    for (const type of Object.keys(this.collectionMap)) {
-      await this.syncType(type);
-    }
-  },
-  subscribeType(type) {
-    if (!this.enabled || this.listeners[type]) return;
-    const collection = this.collectionMap[type];
-    this.listeners[type] = this.db.collection(collection).doc('state').onSnapshot((snap) => {
-      if (!snap.exists) return;
-      const data = snap.data() || {};
-      const items = this.normalizeCloudItems(data).map(item => this.deserializeRecord(item));
-      if (!Array.isArray(items)) return;
-      const localJson = JSON.stringify((appState[type]?.data || []).map(item => this.serializeRecord(item)));
-      const remoteJson = JSON.stringify(items.map(item => this.serializeRecord(item)));
-      if (localJson !== remoteJson) {
-        this.applyRemoteState(type, items);
-      }
-    }, (error) => {
-      console.warn('Falha no listener da nuvem de', type, error);
-    });
-  },
-  subscribeAll() {
-    if (!this.enabled) return;
-    Object.keys(this.collectionMap).forEach(type => this.subscribeType(type));
-  },
-  queueSave(type, delay = 700) {
-    if (!this.enabled) return;
-    clearTimeout(this.saveTimers[type]);
-    this.saveTimers[type] = setTimeout(() => {
-      this.saveType(type);
-    }, delay);
-  },
-  async saveType(type) {
-    if (!this.enabled) return;
-    try {
-      const collection = this.collectionMap[type];
-      const items = (appState[type]?.data || []).map(item => this.serializeRecord(item));
-      await this.db.collection(collection).doc('state').set({
-        type,
-        items,
-        count: items.length,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAtClient: new Date().toISOString(),
-        source: 'dashboard-samarco-web'
-      }, { merge: true });
-    } catch (error) {
-      console.warn('Falha ao salvar nuvem de', type, error);
-    }
-  }
+
+/* ESTADO */
+
+const appState={
+preventiva:{
+data:[],
+filtered:[]
+}
 };
 
-// ==================== UTILITÁRIOS ====================
-const Utils = {
-  showLoading() { document.getElementById('loading').classList.add('show'); },
-  hideLoading() { document.getElementById('loading').classList.remove('show'); },
-  showAlert(message) { alert(message); },
-  norm(str) { 
-    return (str ?? '')
-      .toString()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim()
-      .toUpperCase(); 
-  },
-  toDate(value) {
-    if (!value && value !== 0) return null;
-    if (value instanceof Date) return value;
-    
-    // Excel serial date
-    if (typeof value === 'number') {
-      const epoch = new Date(Date.UTC(1899, 11, 30));
-      return new Date(epoch.getTime() + value * 86400 * 1000);
-    }
-    
-    const str = String(value).trim();
-    if (!str) return null;
-    
-    // ISO format: YYYY-MM-DD
-    let match = str.match(/(\d{4})-(\d{2})-(\d{2})/);
-    if (match) {
-      return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
-    }
-    
-    // Brazilian format: DD/MM/YYYY
-    match = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
-    if (match) {
-      const day = parseInt(match[1]);
-      const month = parseInt(match[2]) - 1;
-      const year = parseInt(match[3].length === 2 ? ('20' + match[3]) : match[3]);
-      return new Date(year, month, day);
-    }
-    
-    const date = new Date(str);
-    return isNaN(date.getTime()) ? null : date;
-  },
-  formatDate(date) { 
-    if (!date) return ''; 
-    const d = new Date(date); 
-    return String(d.getDate()).padStart(2, '0') + '/' +
-           String(d.getMonth() + 1).padStart(2, '0') + '/' +
-           d.getFullYear(); 
-  },
-  getColumnValue(row, names) { 
-    for (const name of names) { 
-      if (row[name] !== undefined && row[name] !== null && row[name] !== '') {
-        return row[name];
-      } 
-    } 
-    return ''; 
-  },
-  unique(arr) { return [...new Set(arr.filter(Boolean))]; },
-  downloadCSV(filename, rows) {
-    if (!rows.length) { Utils.showAlert("Nenhum dado para exportar"); return; }
-    const headers = Utils.unique(rows.flatMap(r => Object.keys(r)));
-    const escape = s => (/[";,\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s);
-    const lines = [headers.join(',')];
-    for (const row of rows) { lines.push(headers.map(h => escape(String(row[h] ?? ''))).join(',')); }
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); 
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  }
+
+/* DATA */
+
+const DataManager={
+
+load(type){
+
+const key=CONFIG.STORAGE_KEYS[type.toUpperCase()];
+
+try{
+const raw=localStorage.getItem(key);
+if(raw){
+appState[type].data=JSON.parse(raw)||[];
+}
+}catch(e){}
+
+appState[type].filtered=[...appState[type].data];
+
+},
+
+applyFilters(type){
+
+const text=(document.getElementById(`filter-text-${type}`)?.value||"").toLowerCase();
+const area=(document.getElementById(`filter-area-${type}`)?.value||"");
+const tag=(document.getElementById(`filter-tag-${type}`)?.value||"");
+
+let data=[...appState[type].data];
+
+if(text){
+data=data.filter(x=>JSON.stringify(x).toLowerCase().includes(text));
+}
+
+if(area){
+data=data.filter(x=>x.area===area);
+}
+
+if(tag){
+data=data.filter(x=>x.tag===tag);
+}
+
+appState[type].filtered=data;
+
+UI.updateTable(type);
+UI.updateKPIs(type);
+
+}
+
 };
 
-// ==================== GERENCIADOR DE DADOS ====================
-const DataManager = {
-  async processFiles(files, type) {
-    const allRows = [];
-    for (const file of files) {
-      try {
-        const buffer = await file.arrayBuffer();
-        const rows = await this.processExcel(buffer, type);
-        const enriched = rows.map(r => ({...r, _sourceFile: file.name, _importDate: new Date().toISOString()}));
-        allRows.push(...enriched);
-      } catch(err) { 
-        console.error(err); 
-        Utils.showAlert('Erro no arquivo ' + file.name + ': ' + err.message); 
-      }
-    }
-    return allRows;
-  },
-  async processExcel(arrayBuffer, type) {
-    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-    const sheetNames = workbook.SheetNames;
-    const namesLower = sheetNames.map(n => ({ name: n, norm: n.toLowerCase() }));
-    const programacaoSheet = namesLower.find(o => o.norm.includes('programa') && !o.norm.includes('painel'));
-    const sheetName = programacaoSheet ? programacaoSheet.name : sheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const arrayOfArrays = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true, defval: '' });
-    let headerRow = 0;
-    const wanted = ['DATA', 'ÁREA', 'AREA', 'TAG', 'ESPECIFICAÇÃO', 'ESPECIFICACAO', 'SITUAÇÃO', 'SITUACAO', 'OM'];
-    for (let i = 0; i < Math.min(arrayOfArrays.length, 20); i++) {
-      const row = arrayOfArrays[i].map(c => Utils.norm(c));
-      const hits = wanted.filter(w => row.includes(Utils.norm(w))).length;
-      if (hits >= 3) { headerRow = i; break; }
-    }
-    let headers = arrayOfArrays[headerRow].map(h => typeof h === 'string' ? h : String(h));
-    headers = headers.map((h, i) => h && String(h).trim() ? String(h).trim() : ('COL_' + (i + 1)));
-    const seen = {}; 
-    headers = headers.map(h => {
-      let key = h;
-      while (seen[key]) { key = key + '_dup'; }
-      seen[key] = 1;
-      return key;
-    });
-    const data = [];
-    for (let r = headerRow + 1; r < arrayOfArrays.length; r++) {
-      const line = arrayOfArrays[r]; 
-      if (!line || line.every(v => String(v).trim() === '')) continue;
-      const obj = {}; 
-      for (let c = 0; c < headers.length; c++) { obj[headers[c]] = line[c] ?? ''; }
-      const dataValue = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.DATA);
-      obj.DATA = Utils.toDate(dataValue);
-      obj.AREA = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.AREA);
-      obj.TAG = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.TAG);
-      obj.ESPECIFICACAO = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.ESPECIFICACAO);
-      obj.SITUACAO = Utils.norm(Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.SITUACAO));
-      obj.SEMANA = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.SEMANA);
-      obj.OM = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.OM);
-      obj.MES = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.MES);
-      obj.DIA = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.DIA);
-      obj.DURACAO = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.DURACAO);
-      obj.RESPONSAVEL = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.RESPONSAVEL);
-      obj.OBSERVACAO = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.OBSERVACAO);
-      obj._id = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      data.push(obj);
-    }
-    return data;
-  },
-  save(type) { 
-    const key = CONFIG.STORAGE_KEYS[type.toUpperCase()]; 
-    localStorage.setItem(key, JSON.stringify(appState[type].data)); 
-    CLOUD_SYNC.queueSave(type);
-  },
-  load(type) {
-    try {
-      const key = CONFIG.STORAGE_KEYS[type.toUpperCase()];
-      const data = JSON.parse(localStorage.getItem(key) || '[]');
-      appState[type].data = data.map(r => ({...r, DATA: r.DATA ? new Date(r.DATA) : null }));
-      appState[type].filtered = [...appState[type].data];
-      if (window.UI && typeof UI.updateFilters === 'function') UI.updateFilters(type);
-    } catch { 
-      appState[type].data = []; 
-      appState[type].filtered = []; 
-    }
-  },
-  backup() {
-    const payload = {
-      preventiva: appState.preventiva.data,
-      manutencao: appState.manutencao.data,
-      corretiva:  appState.corretiva.data,
-      reprogramada: appState.reprogramada.data,
-      timestamp: new Date().toISOString(),
-      version: '4.0'
-    };
-    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-    const a = document.createElement('a'); 
-    a.href = URL.createObjectURL(blob);
-    a.download = 'samarco_backup_' + new Date().toISOString().split('T')[0] + '.json'; 
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  },
-  async restore(file) {
-    if (!file) return;
-    try {
-      const text = await file.text(); 
-      const data = JSON.parse(text);
-      if (Array.isArray(data.preventiva)) appState.preventiva.data = data.preventiva;
-      if (Array.isArray(data.manutencao)) appState.manutencao.data = data.manutencao;
-      if (Array.isArray(data.corretiva))  appState.corretiva.data  = data.corretiva;
-      if (Array.isArray(data.reprogramada))  appState.reprogramada.data  = data.reprogramada;
-      this.save('preventiva'); 
-      this.save('manutencao'); 
-      this.save('corretiva');
-      this.save('reprogramada');
-      this.applyFilters('preventiva'); 
-      this.applyFilters('manutencao'); 
-      this.applyFilters('corretiva');
-      this.applyFilters('reprogramada');
-      Utils.showAlert('Backup restaurado com sucesso!');
-    } catch(e) { 
-      Utils.showAlert('Erro ao restaurar backup: ' + e.message); 
-    }
-  },
-  applyFilters(type) {
-    const prefix = type === 'preventiva' ? 'prev' : (type === 'manutencao' ? 'mp' : (type === 'corretiva' ? 'mc' : 'mr'));
-    const dateStart = document.getElementById(prefix + 'DateStart').value;
-    const dateEnd   = document.getElementById(prefix + 'DateEnd').value;
-    const area      = document.getElementById(prefix + 'Area').value;
-    const tag       = document.getElementById(prefix + 'Tag').value;
-    const situacao  = document.getElementById(prefix + 'Situacao').value;
-    let filtered = [...appState[type].data];
-    if (dateStart) { 
-      const s = new Date(dateStart); 
-      filtered = filtered.filter(r => r.DATA && r.DATA >= s); 
-    }
-    if (dateEnd) { 
-      const e = new Date(dateEnd); 
-      filtered = filtered.filter(r => r.DATA && r.DATA <= e); 
-    }
-    if (area) { 
-      filtered = filtered.filter(r => r.AREA === area); 
-    }
-    if (tag) { 
-      filtered = filtered.filter(r => r.TAG === tag); 
-    }
-    if (situacao) { 
-      filtered = filtered.filter(r => r.SITUACAO === Utils.norm(situacao)); 
-    }
-    appState[type].filtered = filtered;
-    UI.updateTable(type); 
-    UI.updateKPIs(type); 
-    UI.updateCharts(type);
-  },
-  clearFilters(type) {
-    const prefix = type === 'preventiva' ? 'prev' : (type === 'manutencao' ? 'mp' : (type === 'corretiva' ? 'mc' : 'mr'));
-    document.getElementById(prefix + 'DateStart').value = '';
-    document.getElementById(prefix + 'DateEnd').value = '';
-    document.getElementById(prefix + 'Area').value = '';
-    document.getElementById(prefix + 'Tag').value = '';
-    document.getElementById(prefix + 'Situacao').value = '';
-    this.applyFilters(type);
-  },
-  deleteSelected(type) {
-    const bodyId = (type === 'preventiva') ? 'preventivaBody' : 
-                   (type === 'manutencao') ? 'manutencaoBody' : 
-                   (type === 'corretiva') ? 'corretivaBody' : 
-                   'reprogramadaBody';
-    const body = document.getElementById(bodyId);
-    const checks = body ? Array.from(body.querySelectorAll('.rowChk')).filter(c => c.checked) : [];
-    if (!checks.length) { 
-      Utils.showAlert('Selecione ao menos um registro.'); 
-      return; 
-    }
-    if (!confirm(`Excluir ${checks.length} registro(s) selecionado(s)?`)) return;
-    const toRemove = new Set(checks.map(c => c.dataset.id));
-    appState[type].data = appState[type].data.filter(r => !toRemove.has(r._id));
-    this.save(type); 
-    this.applyFilters(type);
-    Utils.showAlert('Registros excluídos com sucesso!');
-  },
-  deleteAll(type) {
-    if (!confirm('Excluir TODOS os registros desta aba? Esta ação não pode ser desfeita.')) return;
-    appState[type].data = []; 
-    this.save(type); 
-    this.applyFilters(type);
-    Utils.showAlert('Todos os registros foram excluídos!');
-  },
-  export(type) {
-    const rows = appState[type].filtered;
-    if (!rows.length) { 
-      Utils.showAlert('Nenhum dado para exportar'); 
-      return; 
-    }
-    const filename = `${type}_${new Date().toISOString().split('T')[0]}.csv`;
-    Utils.downloadCSV(filename, rows);
-  }
+
+/* UI */
+
+const UI={
+
+updateTable(type){
+
+const tbody=document.querySelector(`#table-${type} tbody`);
+if(!tbody) return;
+
+tbody.innerHTML="";
+
+appState[type].filtered.forEach(item=>{
+
+const tr=document.createElement("tr");
+
+tr.innerHTML=`
+
+<td>${Utils.escapeHtml(item.om)}</td>
+<td>${Utils.escapeHtml(item.area)}</td>
+<td>${Utils.escapeHtml(item.tag)}</td>
+<td>${Utils.escapeHtml(item.status)}</td>
+<td>${Utils.escapeHtml(item.descricao)}</td>
+
+`;
+
+tbody.appendChild(tr);
+
+});
+
+},
+
+updateKPIs(type){
+
+const items=appState[type].filtered;
+
+const total=items.length;
+
+const concluidas=items.filter(x=>String(x.status).toLowerCase()=="concluida").length;
+
+const andamento=items.filter(x=>String(x.status).toLowerCase()=="andamento").length;
+
+const pendentes=total-concluidas-andamento;
+
+document.getElementById(`kpi-total-${type}`).textContent=total;
+document.getElementById(`kpi-concluidas-${type}`).textContent=concluidas;
+document.getElementById(`kpi-andamento-${type}`).textContent=andamento;
+document.getElementById(`kpi-pendentes-${type}`).textContent=pendentes;
+
+},
+
+init(){
+
+DataManager.load("preventiva");
+
+DataManager.applyFilters("preventiva");
+
+CLOUD_SYNC.init().then(()=>{
+CLOUD_SYNC.syncAll();
+});
+
+}
+
 };
 
-// ==================== INTERFACE DO USUÁRIO ====================
-const UI = {
-  async init() {
-    this.setupEventListeners();
-    DataManager.load('preventiva'); 
-    DataManager.load('manutencao'); 
-    DataManager.load('corretiva');
-    DataManager.load('reprogramada');
-    DataManager.applyFilters('preventiva'); 
-    DataManager.applyFilters('manutencao'); 
-    DataManager.applyFilters('corretiva');
-    DataManager.applyFilters('reprogramada');
-    await CLOUD_SYNC.init();
-    await CLOUD_SYNC.syncAll();
-    CLOUD_SYNC.subscribeAll();
-    window.addEventListener('focus', () => { CLOUD_SYNC.syncAll(); });
-  },
-  setupEventListeners() {
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => this.switchTab(e.currentTarget.dataset.tab));
-    });
 
-    // Preventiva
-    document.getElementById('inputPrev').addEventListener('change', async (e) => {
-      if (!e.target.files.length) return; 
-      Utils.showLoading();
-      const newRows = await DataManager.processFiles(e.target.files, 'preventiva');
-      appState.preventiva.data.push(...newRows); 
-      DataManager.save('preventiva'); 
-      DataManager.applyFilters('preventiva');
-      if (window.CLOUD_SYNC && CLOUD_SYNC.enabled) await CLOUD_SYNC.saveType('preventiva');
-      e.target.value = ''; 
-      Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
-    });
-    document.getElementById('btnPrevCSV').addEventListener('click', () => DataManager.export('preventiva'));
-    document.getElementById('btnPrevDeleteSel').addEventListener('click', () => DataManager.deleteSelected('preventiva'));
-    document.getElementById('btnPrevDeleteAll').addEventListener('click', () => DataManager.deleteAll('preventiva'));
-    document.getElementById('prevRefresh').addEventListener('click', () => DataManager.applyFilters('preventiva'));
-    document.getElementById('prevClear').addEventListener('click', () => DataManager.clearFilters('preventiva'));
-    document.getElementById('btnPrevExportPNG').addEventListener('click', () => Utils.__exportDashboardPNG10 && Utils.__exportDashboardPNG10('preventiva'));
 
-    // Manutenção Programada
-    document.getElementById('inputMP').addEventListener('change', async (e) => {
-      if (!e.target.files.length) return; 
-      Utils.showLoading();
-      const newRows = await DataManager.processFiles(e.target.files, 'manutencao');
-      appState.manutencao.data.push(...newRows); 
-      DataManager.save('manutencao'); 
-      DataManager.applyFilters('manutencao');
-      if (window.CLOUD_SYNC && CLOUD_SYNC.enabled) await CLOUD_SYNC.saveType('manutencao');
-      e.target.value = ''; 
-      Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
-    });
-    document.getElementById('btnMPCSV').addEventListener('click', () => DataManager.export('manutencao'));
-    document.getElementById('btnMpDeleteSel').addEventListener('click', () => DataManager.deleteSelected('manutencao'));
-    document.getElementById('btnMpDeleteAll').addEventListener('click', () => DataManager.deleteAll('manutencao'));
-    document.getElementById('mpRefresh').addEventListener('click', () => DataManager.applyFilters('manutencao'));
-    document.getElementById('mpClear').addEventListener('click', () => DataManager.clearFilters('manutencao'));
-    document.getElementById('btnMPExportPNG').addEventListener('click', () => Utils.__exportDashboardPNG10 && Utils.__exportDashboardPNG10('manutencao'));
+/* FIREBASE */
 
-    // Manutenção Corretiva
-    document.getElementById('inputMC').addEventListener('change', async (e) => {
-      if (!e.target.files.length) return; 
-      Utils.showLoading();
-      const newRows = await DataManager.processFiles(e.target.files, 'corretiva');
-      appState.corretiva.data.push(...newRows); 
-      DataManager.save('corretiva'); 
-      DataManager.applyFilters('corretiva');
-      if (window.CLOUD_SYNC && CLOUD_SYNC.enabled) await CLOUD_SYNC.saveType('corretiva');
-      e.target.value = ''; 
-      Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
-    });
-    document.getElementById('btnMCCSV').addEventListener('click', () => DataManager.export('corretiva'));
-    document.getElementById('btnMcDeleteSel').addEventListener('click', () => DataManager.deleteSelected('corretiva'));
-    document.getElementById('btnMcDeleteAll').addEventListener('click', () => DataManager.deleteAll('corretiva'));
-    document.getElementById('mcRefresh').addEventListener('click', () => DataManager.applyFilters('corretiva'));
-    document.getElementById('mcClear').addEventListener('click', () => DataManager.clearFilters('corretiva'));
-    document.getElementById('btnMCExportPNG').addEventListener('click', () => Utils.__exportDashboardPNG10 && Utils.__exportDashboardPNG10('corretiva'));
-
-    // Manutenção Reprogramada
-    document.getElementById('inputMR').addEventListener('change', async (e) => {
-      if (!e.target.files.length) return; 
-      Utils.showLoading();
-      const newRows = await DataManager.processFiles(e.target.files, 'reprogramada');
-      appState.reprogramada.data.push(...newRows); 
-      DataManager.save('reprogramada'); 
-      DataManager.applyFilters('reprogramada');
-      if (window.CLOUD_SYNC && CLOUD_SYNC.enabled) await CLOUD_SYNC.saveType('reprogramada');
-      e.target.value = ''; 
-      Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
-    });
-    document.getElementById('btnMRCSV').addEventListener('click', () => DataManager.export('reprogramada'));
-    document.getElementById('btnMrDeleteSel').addEventListener('click', () => DataManager.deleteSelected('reprogramada'));
-    document.getElementById('btnMrDeleteAll').addEventListener('click', () => DataManager.deleteAll('reprogramada'));
-    document.getElementById('mrRefresh').addEventListener('click', () => DataManager.applyFilters('reprogramada'));
-    document.getElementById('mrClear').addEventListener('click', () => DataManager.clearFilters('reprogramada'));
-    document.getElementById('btnMRExportPNG').addEventListener('click', () => Utils.__exportDashboardPNG10 && Utils.__exportDashboardPNG10('reprogramada'));
-
-    // Backup/Restore
-    document.getElementById('btnBackup').addEventListener('click', () => DataManager.backup());
-    document.getElementById('restoreInput').addEventListener('change', async (e) => {
-      if (e.target.files.length) { 
-        await DataManager.restore(e.target.files[0]); 
-        e.target.value = ''; 
-      }
-    });
-  },
-  switchTab(tab) {
-    appState.currentTab = tab;
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.tab === tab);
-    });
-    document.querySelectorAll('.tab-content').forEach(content => {
-      content.style.display = (content.id === 'tab-' + tab) ? 'block' : 'none';
-    });
-  },
-  updateFilters(type) {
-    const prefix = type === 'preventiva' ? 'prev' : (type === 'manutencao' ? 'mp' : (type === 'corretiva' ? 'mc' : 'mr'));
-    const areaSel = document.getElementById(prefix + 'Area');
-    const tagSel = document.getElementById(prefix + 'Tag');
-    if (!areaSel || !tagSel) return;
-
-    const currentArea = areaSel.value;
-    const currentTag = tagSel.value;
-    const areas = [...new Set((appState[type].data || []).map(r => r.AREA).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR'));
-    const tags  = [...new Set((appState[type].data || []).map(r => r.TAG).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR'));
-
-    areaSel.innerHTML = '<option value="">Todas as áreas</option>' + areas.map(v => `<option value="${Utils.escapeHtml(String(v))}">${Utils.escapeHtml(String(v))}</option>`).join('');
-    tagSel.innerHTML  = '<option value="">Todas as tags</option>' + tags.map(v => `<option value="${Utils.escapeHtml(String(v))}">${Utils.escapeHtml(String(v))}</option>`).join('');
-
-    if (areas.includes(currentArea)) areaSel.value = currentArea;
-    if (tags.includes(currentTag)) tagSel.value = currentTag;
-  },
-
-  updateTable(type) {
-    const headId = (type === 'preventiva') ? 'preventivaHead' : 
-                   (type === 'manutencao') ? 'manutencaoHead' : 
-                   (type === 'corretiva') ? 'corretivaHead' : 
-                   'reprogramadaHead';
-    const bodyId = (type === 'preventiva') ? 'preventivaBody' : 
-                   (type === 'manutencao') ? 'manutencaoBody' : 
-                   (type === 'corretiva') ? 'corretivaBody' : 
-                   'reprogramadaBody';
-    const thead = document.getElementById(headId); 
-    const tbody = document.getElementById(bodyId);
-    const rows = appState[type].filtered;
-    if (!thead.children.length) {
-      thead.innerHTML = `
-        <th style="width: 40px;"><input type="checkbox" id="${type}CheckAll" class="form-check-input"></th>
-        <th>Data</th><th>Área</th><th>Tag</th><th>Especificação</th><th>Situação</th><th>Semana</th><th>OM</th>`;
-      const checkAll = document.getElementById(type + 'CheckAll');
-      if (checkAll) { 
-        checkAll.addEventListener('change', (e) => {
-          document.querySelectorAll('#' + bodyId + ' .rowChk').forEach(ch => {
-            ch.checked = e.target.checked;
-          });
-        }); 
-      }
-    }
-    tbody.innerHTML = '';
-    for (const row of rows) {
-      const tr = document.createElement('tr');
-      let situacaoClass = '';
-      if (type === 'reprogramada') {
-        situacaoClass = 'badge-reprogramado';
-      } else {
-        situacaoClass = row.SITUACAO === 'REALIZADO' ? 'badge-realizado' : 
-                       (row.SITUACAO === 'NÃO REALIZADO' ? 'badge-nao-realizado' : 'badge-pendente');
-      }
-      tr.innerHTML = `
-        <td><input type="checkbox" class="form-check-input rowChk" data-id="${row._id}"></td>
-        <td>${Utils.formatDate(row.DATA)}</td>
-        <td>${row.AREA || '-'}</td>
-        <td>${row.TAG || '-'}</td>
-        <td style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${row.ESPECIFICACAO || '-'}">${row.ESPECIFICACAO || '-'}</td>
-        <td><span class="badge-status ${situacaoClass}">${row.SITUACAO || (type === 'reprogramada' ? 'REPROGRAMADO' : 'PENDENTE')}</span></td>
-        <td>${row.SEMANA || '-'}</td>
-        <td>${row.OM || '-'}</td>`;
-      tbody.appendChild(tr);
-    }
-    this.updateFilterOptions(type);
-  },
-  updateFilterOptions(type) {
-    const prefix = type === 'preventiva' ? 'prev' : 
-                   (type === 'manutencao' ? 'mp' : 
-                   (type === 'corretiva' ? 'mc' : 'mr'));
-    const data = appState[type].data;
-    const areas = Utils.unique(data.map(r => r.AREA).filter(Boolean)).sort();
-    const tags  = Utils.unique(data.map(r => r.TAG).filter(Boolean)).sort();
-    const areaSelect = document.getElementById(prefix + 'Area');
-    const tagSelect  = document.getElementById(prefix + 'Tag');
-    const currentArea = areaSelect.value; 
-    const currentTag = tagSelect.value;
-    areaSelect.innerHTML = '<option value="">Todas</option>';
-    for (const area of areas) { 
-      const o = document.createElement('option'); 
-      o.value = area; 
-      o.textContent = area; 
-      if (area === currentArea) o.selected = true; 
-      areaSelect.appendChild(o); 
-    }
-    tagSelect.innerHTML = '<option value="">Todas</option>';
-    for (const tag of tags) { 
-      const o = document.createElement('option'); 
-      o.value = tag; 
-      o.textContent = tag; 
-      if (tag === currentTag) o.selected = true; 
-      tagSelect.appendChild(o); 
-    }
-  },
-  updateKPIs(type) {
-    const K = type === 'preventiva' ? 'Prev' : 
-              (type === 'manutencao' ? 'Mp' : 
-              (type === 'corretiva' ? 'Mc' : 'Mr'));
-    const data = appState[type].filtered;
-    const total = data.length;
-    const areas = Utils.unique(data.map(r => r.AREA).filter(Boolean)).length;
-    const tags  = Utils.unique(data.map(r => r.TAG).filter(Boolean)).length;
-    
-    if (type === 'reprogramada') {
-      const reprogramados = data.filter(r => r.SITUACAO === 'REPROGRAMADO').length;
-      const realizados = data.filter(r => r.SITUACAO === 'REALIZADO').length;
-      const pendentes = total - realizados - reprogramados;
-      const percentRealizado = total > 0 ? Math.round((realizados / total) * 100) : 0;
-      
-      document.getElementById('kpi' + K + 'Count').textContent = total;
-      document.getElementById('kpi' + K + 'Areas').textContent = areas;
-      document.getElementById('kpi' + K + 'Tags').textContent = tags;
-      document.getElementById('kpi' + K + 'Rate').textContent = percentRealizado + '%';
-      document.getElementById('kpi' + K + 'Done').textContent = realizados;
-      document.getElementById('kpi' + K + 'Pending').textContent = pendentes;
-      document.getElementById('kpi' + K + 'Reprogramado').textContent = reprogramados;
-    } else {
-      const realizados = data.filter(r => r.SITUACAO === 'REALIZADO').length;
-      const naoRealizados = data.filter(r => r.SITUACAO === 'NÃO REALIZADO').length;
-      const pendentes = total - realizados - naoRealizados;
-      const percentRealizado = total > 0 ? Math.round((realizados / total) * 100) : 0;
-      
-      document.getElementById('kpi' + K + 'Count').textContent = total;
-      document.getElementById('kpi' + K + 'Areas').textContent = areas;
-      document.getElementById('kpi' + K + 'Tags').textContent = tags;
-      document.getElementById('kpi' + K + 'Rate').textContent = percentRealizado + '%';
-      document.getElementById('kpi' + K + 'Done').textContent = realizados;
-      document.getElementById('kpi' + K + 'Pending').textContent = pendentes;
-      document.getElementById('kpi' + K + 'NotDone').textContent = naoRealizados;
-    }
-  },
-  updateCharts(type) {
-    const prefix = type === 'preventiva' ? 'prev' : 
-                   (type === 'manutencao' ? 'mp' : 
-                   (type === 'corretiva' ? 'mc' : 'mr'));
-    const data = appState[type].filtered;
-    this.updateByAreaChart(type, prefix, data);
-    this.updateTimelineChart(type, prefix, data);
-    this.updateParetoChart(type, prefix, data);
-    this.updateStatusChart(type, prefix, data);
-  },
-  updateByAreaChart(type, prefix, data) {
-    const canvas = document.getElementById(prefix + 'ByArea'); 
-    if (!canvas) return; 
-    const ctx = canvas.getContext('2d');
-    if (appState[type].charts.byArea) appState[type].charts.byArea.destroy();
-    const areaCount = {}; 
-    for (const row of data) { 
-      const a = row.AREA || 'Sem Área'; 
-      areaCount[a] = (areaCount[a] || 0) + 1; 
-    }
-    const labels = Object.keys(areaCount).sort(); 
-    const values = labels.map(l => areaCount[l]);
-    appState[type].charts.byArea = new Chart(ctx, {
-      type: 'bar', 
-      data: { 
-        labels, 
-        datasets: [{ 
-          label: 'Quantidade', 
-          data: values, 
-          backgroundColor: CONFIG.COLORS.brand, 
-          borderColor: CONFIG.COLORS.brand, 
-          borderWidth: 1 
-        }] 
-      },
-      options: { 
-        responsive: true, 
-        maintainAspectRatio: false, 
-        plugins: { legend: { display: false } }, 
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } 
-      }
-    });
-  },
-  updateTimelineChart(type, prefix, data) {
-    const canvas = document.getElementById(prefix + 'Timeline'); 
-    if (!canvas) return; 
-    const ctx = canvas.getContext('2d');
-    if (appState[type].charts.timeline) appState[type].charts.timeline.destroy();
-    const dateCount = {}; 
-    for (const row of data) { 
-      if (!row.DATA) continue; 
-      const ds = Utils.formatDate(row.DATA); 
-      dateCount[ds] = (dateCount[ds] || 0) + 1; 
-    }
-    const labels = Object.keys(dateCount).sort((a, b) => {
-      const [dA, mA, yA] = a.split('/');
-      const [dB, mB, yB] = b.split('/');
-      return new Date(yA, mA - 1, dA) - new Date(yB, mB - 1, dB);
-    });
-    const values = labels.map(l => dateCount[l]);
-    appState[type].charts.timeline = new Chart(ctx, {
-      type: 'line',
-      data: { 
-        labels, 
-        datasets: [{ 
-          label: 'Atividades', 
-          data: values, 
-          backgroundColor: 'rgba(26, 160, 109, 0.2)', 
-          borderColor: CONFIG.COLORS.accent, 
-          borderWidth: 2, 
-          fill: true, 
-          tension: 0.4 
-        }] 
-      },
-      options: { 
-        responsive: true, 
-        maintainAspectRatio: false, 
-        plugins: { legend: { display: false } }, 
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } 
-      }
-    });
-  },
-  updateParetoChart(type, prefix, data) {
-    const canvas = document.getElementById(prefix + 'Pareto'); 
-    if (!canvas) return; 
-    const ctx = canvas.getContext('2d');
-    if (appState[type].charts.pareto) appState[type].charts.pareto.destroy();
-    const tagCount = {}; 
-    for (const row of data) { 
-      const t = row.TAG || 'Sem Tag'; 
-      tagCount[t] = (tagCount[t] || 0) + 1; 
-    }
-    
-    // MODIFICAÇÃO AQUI: Mostrar TODOS os equipamentos, não apenas os top 10
-    const sorted = Object.entries(tagCount).sort((a, b) => b[1] - a[1]);
-    // Remover o .slice(0, 10) para mostrar todos os equipamentos
-    const labels = sorted.map(t => t[0]); 
-    const values = sorted.map(t => t[1]);
-    const total = values.reduce((s, v) => s + v, 0); 
-    const cumulative = []; 
-    let sum = 0; 
-    for(const v of values) { 
-      sum += v; 
-      cumulative.push((sum / total) * 100); 
-    }
-    appState[type].charts.pareto = new Chart(ctx, {
-      type: 'bar',
-      data: { 
-        labels, 
-        datasets: [
-          { 
-            label: 'Quantidade', 
-            data: values, 
-            backgroundColor: CONFIG.COLORS.brand, 
-            borderColor: CONFIG.COLORS.brand, 
-            borderWidth: 1, 
-            yAxisID: 'y' 
-          },
-          { 
-            label: '% Acumulado', 
-            data: cumulative, 
-            type: 'line', 
-            borderColor: CONFIG.COLORS.danger, 
-            backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-            borderWidth: 2, 
-            fill: false, 
-            yAxisID: 'y1' 
-          }
-        ]
-      },
-      options: { 
-        responsive: true, 
-        maintainAspectRatio: false, 
-        plugins: { 
-          legend: { display: true, position: 'top' },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                let label = context.dataset.label || '';
-                if (label) {
-                  label += ': ';
-                }
-                if (context.parsed.y !== null) {
-                  if (context.datasetIndex === 0) {
-                    label += context.parsed.y + ' OMs';
-                  } else {
-                    label += context.parsed.y.toFixed(1) + '%';
-                  }
-                }
-                return label;
-              }
-            }
-          }
-        },
-        scales: { 
-          y: { 
-            type: 'linear', 
-            position: 'left', 
-            beginAtZero: true, 
-            ticks: { precision: 0 } 
-          },
-          y1: { 
-            type: 'linear', 
-            position: 'right', 
-            beginAtZero: true, 
-            max: 100, 
-            grid: { drawOnChartArea: false }, 
-            ticks: { callback: (v) => v + '%' } 
-          },
-          x: {
-            ticks: {
-              maxRotation: 45,
-              minRotation: 45
-            }
-          }
-        } 
-      }
-    });
-  },
-  updateStatusChart(type, prefix, data) {
-    const canvas = document.getElementById(prefix + 'Status'); 
-    if (!canvas) return; 
-    const ctx = canvas.getContext('2d');
-    if (appState[type].charts.status) appState[type].charts.status.destroy();
-    
-    if (type === 'reprogramada') {
-      const reprogramados = data.filter(r => r.SITUACAO === 'REPROGRAMADO').length;
-      const realizados = data.filter(r => r.SITUACAO === 'REALIZADO').length;
-      const pendentes = data.length - realizados - reprogramados;
-      
-      appState[type].charts.status = new Chart(ctx, {
-        type: 'doughnut',
-        data: { 
-          labels: ['Realizado', 'Reprogramado', 'Pendente'], 
-          datasets: [{ 
-            data: [realizados, reprogramados, pendentes], 
-            backgroundColor: [CONFIG.COLORS.success, CONFIG.COLORS.reprogramado, CONFIG.COLORS.warning], 
-            borderWidth: 2, 
-            borderColor: '#fff' 
-          }] 
-        },
-        options: { 
-          responsive: true, 
-          maintainAspectRatio: false, 
-          plugins: { legend: { display: true, position: 'bottom' } } 
-        }
-      });
-    } else {
-      const realizados = data.filter(r => r.SITUACAO === 'REALIZADO').length;
-      const naoRealizados = data.filter(r => r.SITUACAO === 'NÃO REALIZADO').length;
-      const pendentes = data.length - realizados - naoRealizados;
-      
-      appState[type].charts.status = new Chart(ctx, {
-        type: 'doughnut',
-        data: { 
-          labels: ['Realizado', 'Não Realizado', 'Pendente'], 
-          datasets: [{ 
-            data: [realizados, naoRealizados, pendentes], 
-            backgroundColor: [CONFIG.COLORS.success, CONFIG.COLORS.danger, CONFIG.COLORS.warning], 
-            borderWidth: 2, 
-            borderColor: '#fff' 
-          }] 
-        },
-        options: { 
-          responsive: true, 
-          maintainAspectRatio: false, 
-          plugins: { legend: { display: true, position: 'bottom' } } 
-        }
-      });
-    }
-  }
+const firebaseConfig={
+apiKey:"SUA_APIKEY",
+authDomain:"dashboard-samarco.firebaseapp.com",
+projectId:"dashboard-samarco",
+storageBucket:"dashboard-samarco.appspot.com",
+messagingSenderId:"000000",
+appId:"000000"
 };
 
-// ==================== INICIALIZAÇÃO ====================
-document.addEventListener('DOMContentLoaded', () => { UI.init(); });
+
+const CLOUD_SYNC={
+
+db:null,
+
+async init(){
+
+firebase.initializeApp(firebaseConfig);
+
+this.db=firebase.firestore();
+
+console.log("Firebase OK");
+
+},
+
+async loadFromCloud(type){
+
+const snap=await this.db.collection(`dashboard_oms_${type}`)
+.orderBy("createdAt","desc")
+.limit(1)
+.get();
+
+if(snap.empty) return [];
+
+const payload=snap.docs[0].data();
+
+if(Array.isArray(payload.items)){
+return payload.items;
+}
+
+return [];
+
+},
+
+applyRemoteState(type,items){
+
+appState[type].data=items;
+
+localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()],JSON.stringify(items));
+
+DataManager.applyFilters(type);
+
+},
+
+async syncType(type){
+
+const cloudItems=await this.loadFromCloud(type);
+
+if(cloudItems.length>0){
+
+console.log("dados nuvem",cloudItems.length);
+
+this.applyRemoteState(type,cloudItems);
+
+}
+
+},
+
+async syncAll(){
+
+await this.syncType("preventiva");
+
+}
+
+};
+
+
+
+document.addEventListener("DOMContentLoaded",UI.init);
+
 </script>
 
-<!-- === BEGIN: Export PNG Paginado (mantido e ampliado para 4 abas) === -->
-<script>
-(function(){
-  if (!window.Utils) { window.Utils = {}; }
-
-  function grabCanvasDataURL(el){ try{return el.toDataURL('image/png');}catch(e){return null;} }
-
-  function buildFirstPage(type){
-    const now = new Date();
-    const map = { 
-      preventiva: {prefix: 'prev', K: 'Prev', title: 'Programação Preventiva'}, 
-      manutencao: {prefix: 'mp', K: 'Mp', title: 'Manutenção Programada'}, 
-      corretiva: {prefix: 'mc', K: 'Mc', title: 'Manutenção Corretiva'},
-      reprogramada: {prefix: 'mr', K: 'Mr', title: 'Manutenção Reprogramada'} 
-    };
-    const cfg = map[type]; 
-    const prefix = cfg.prefix; 
-    const K = cfg.K;
-
-    const kpis = {
-      total: (document.getElementById('kpi' + K + 'Count') || {}).textContent || '0',
-      areas: (document.getElementById('kpi' + K + 'Areas') || {}).textContent || '0',
-      tags : (document.getElementById('kpi' + K + 'Tags') || {}).textContent || '0',
-      rate : (document.getElementById('kpi' + K + 'Rate') || {}).textContent || '0%'
-    };
-
-    const canvases = [
-      { id: prefix + 'ByArea',   title: 'Distribuição por Área' },
-      { id: prefix + 'Timeline', title: 'Linha do Tempo' },
-      { id: prefix + 'Pareto',   title: 'Pareto por Tag' },
-      { id: prefix + 'Status',   title: 'Status das Atividades' },
-    ].map(c => ({ title: c.title, data: (document.getElementById(c.id) ? grabCanvasDataURL(document.getElementById(c.id)) : null) }))
-     .filter(x => !!x.data);
-
-    const root = document.createElement('div'); 
-    root.className = 'page-capture';
-    const header = document.createElement('div'); 
-    header.className = 'page-row';
-    header.innerHTML = `
-      <div class="page-col">
-        <h2 class="page-title">Dashboard Samarco — ${cfg.title}</h2>
-        <p class="page-sub">Cabeçalho e Gráficos • ${now.toLocaleDateString()} ${now.toLocaleTimeString()}</p>
-      </div>
-      <div class="page-col" style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
-        <div class="kpi"><div class="label">Total</div><div class="value">${kpis.total}</div></div>
-        <div class="kpi"><div class="label">Áreas</div><div class="value">${kpis.areas}</div></div>
-        <div class="kpi"><div class="label">Tags</div><div class="value">${kpis.tags}</div></div>
-        <div class="kpi"><div class="label">% Realizado</div><div class="value">${kpis.rate}</div></div>
-      </div>`;
-    root.appendChild(header);
-
-    const grid = document.createElement('div'); 
-    grid.className = 'chart-grid';
-    canvases.forEach(c => { 
-      const card = document.createElement('div'); 
-      card.className = 'chart-card'; 
-      const h = document.createElement('h6'); 
-      h.textContent = c.title; 
-      const img = document.createElement('img'); 
-      img.className = 'chart-img'; 
-      img.src = c.data; 
-      card.appendChild(h); 
-      card.appendChild(img); 
-      grid.appendChild(card); 
-    });
-    root.appendChild(grid);
-
-    const foot = document.createElement('div'); 
-    foot.className = 'page-footer'; 
-    foot.innerHTML = '<span>Página 1</span><span>Gerado automaticamente</span>'; 
-    root.appendChild(foot);
-    return root;
-  }
-
-  function buildTablePages(type){
-    const pages = [];
-    const headId = (type === 'preventiva') ? 'preventivaHead' : 
-                   (type === 'manutencao') ? 'manutencaoHead' : 
-                   (type === 'corretiva') ? 'corretivaHead' : 
-                   'reprogramadaHead';
-    const bodyId = (type === 'preventiva') ? 'preventivaBody' : 
-                   (type === 'manutencao') ? 'manutencaoBody' : 
-                   (type === 'corretiva') ? 'corretivaBody' : 
-                   'reprogramadaBody';
-    const head = document.getElementById(headId);
-    const tbody = document.getElementById(bodyId);
-    if (!head || !tbody) return pages;
-
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    const perPage = 10;
-
-    for (let i = 0; i < rows.length; i += perPage){
-      const slice = rows.slice(i, i + perPage);
-      const page = document.createElement('div'); 
-      page.className = 'page-capture';
-      const titleWrap = document.createElement('div');
-      const tabTitle = (type === 'preventiva' ? 'Programação Preventiva' : 
-                       type === 'manutencao' ? 'Manutenção Programada' : 
-                       type === 'corretiva' ? 'Manutenção Corretiva' : 
-                       'Manutenção Reprogramada');
-      titleWrap.innerHTML = '<h2 class="page-title">OMs — ' + tabTitle + '</h2>' + 
-                            '<p class="page-sub">Listagem contínua (paisagem)</p>';
-      page.appendChild(titleWrap);
-
-      const table = document.createElement('table'); 
-      table.className = 'table-mini';
-      const thead = document.createElement('thead'); 
-      const trh = document.createElement('tr');
-      Array.from(head.children).forEach(th => { 
-        const t = document.createElement('th'); 
-        t.textContent = th.textContent.trim(); 
-        trh.appendChild(t); 
-      });
-      thead.appendChild(trh); 
-      table.appendChild(thead);
-
-      const tb = document.createElement('tbody');
-      slice.forEach(tr => {
-        const ntr = document.createElement('tr');
-        Array.from(tr.children).forEach(td => {
-          const c = document.createElement('td');
-          if (td.querySelector('input[type="checkbox"]')) { 
-            c.textContent = '•'; 
-          } else { 
-            c.textContent = (td.textContent || '').trim(); 
-          }
-          ntr.appendChild(c);
-        });
-        tb.appendChild(ntr);
-      });
-      table.appendChild(tb); 
-      page.appendChild(table);
-
-      const foot = document.createElement('div'); 
-      foot.className = 'page-footer';
-      const pageNum = (i / perPage) + 2; 
-      foot.innerHTML = '<span>Página ' + pageNum + '</span><span>Gerado automaticamente</span>';
-      page.appendChild(foot);
-
-      pages.push(page);
-    }
-    return pages;
-  }
-
-  async function renderNodeToPNG(node, filename){
-    const off = document.getElementById('_offscreen_pageroot') || (function(){
-      const d = document.createElement('div'); 
-      d.id = '_offscreen_pageroot'; 
-      d.style.position = 'fixed'; 
-      d.style.left = '-99999px'; 
-      d.style.top = '-99999px'; 
-      d.style.width = '0'; 
-      d.style.height = '0'; 
-      d.style.overflow = 'hidden'; 
-      document.body.appendChild(d); 
-      return d;
-    })();
-    off.appendChild(node);
-    try {
-      const canvas = await html2canvas(node, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' });
-      const a = document.createElement('a'); 
-      a.download = filename; 
-      a.href = canvas.toDataURL('image/png'); 
-      a.click();
-    } finally { 
-      if (node.parentNode === off) off.removeChild(node); 
-    }
-  }
-
-  async function exportDashboardPNG(type){
-    if (Utils.showLoading) Utils.showLoading();
-    try{
-      const base = type + '_' + new Date().toISOString().split('T')[0];
-      const p1 = buildFirstPage(type); 
-      await renderNodeToPNG(p1, base + '_p1.png');
-      const tables = buildTablePages(type);
-      for (let i = 0; i < tables.length; i++) { 
-        await renderNodeToPNG(tables[i], base + '_p' + (i + 2) + '.png'); 
-      }
-    } finally { 
-      if (Utils.hideLoading) Utils.hideLoading(); 
-    }
-  }
-
-  window.addEventListener('load', function(){
-    const bPrev = document.getElementById('btnPrevExportPNG');
-    const bMp   = document.getElementById('btnMPExportPNG');
-    const bMc   = document.getElementById('btnMCExportPNG');
-    const bMr   = document.getElementById('btnMRExportPNG');
-    if (bPrev) bPrev.onclick = () => exportDashboardPNG('preventiva');
-    if (bMp)   bMp.onclick   = () => exportDashboardPNG('manutencao');
-    if (bMc)   bMc.onclick   = () => exportDashboardPNG('corretiva');
-    if (bMr)   bMr.onclick   = () => exportDashboardPNG('reprogramada');
-  });
-
-  Utils.__exportDashboardPNG10 = exportDashboardPNG;
-})();
-</script>
-<!-- === END: Export PNG Paginado === -->
-    <!-- SENSOR NAZA PORTAL - DASHBOARD SAMARCO (CORRIGIDO - COM SUPORTE A REALTIME) -->
-<script>
-(function() {
-    console.log('🔄 Iniciando sensor do Dashboard Samarco...');
-    
-    const SISTEMA_ID = 'producao';
-    const MAX_TENTATIVAS = 30;
-    let tentativas = 0;
-    let usandoFirestore = false;
-    
-    const firebaseConfig = {
-        apiKey: "AIzaSyDneReMjO78JqJ-LvmSTiQqUMkxT97H6JE",
-        authDomain: "naza-auditoria-hub.firebaseapp.com",
-        databaseURL: "https://naza-auditoria-hub-default-rtdb.firebaseio.com",
-        projectId: "naza-auditoria-hub",
-    };
-    
-    // Função para carregar script dinamicamente
-    function carregarScriptRealtime() {
-        return new Promise((resolve, reject) => {
-            // Verifica se já está carregado
-            if (typeof firebase !== 'undefined' && firebase.database) {
-                resolve();
-                return;
-            }
-            
-            console.log('📦 Carregando Firebase Realtime Database...');
-            const script = document.createElement('script');
-            script.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js';
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-        });
-    }
-    
-    function extrairNumeroElemento(id) {
-        const el = document.getElementById(id);
-        if (!el) return 0;
-        const texto = el.textContent || '';
-        const match = texto.match(/\d+/);
-        return match ? parseInt(match[0]) : 0;
-    }
-    
-    function extrairPercentualElemento(id) {
-        const el = document.getElementById(id);
-        if (!el) return 0;
-        const texto = el.textContent || '';
-        const match = texto.match(/(\d+)%/);
-        return match ? parseInt(match[1]) : 0;
-    }
-    
-    function coletarDadosReais() {
-        try {
-            let abaAtiva = 'preventiva';
-            const tabs = document.querySelectorAll('.tab-btn');
-            for (const tab of tabs) {
-                if (tab.classList.contains('active')) {
-                    if (tab.dataset.tab) abaAtiva = tab.dataset.tab;
-                    break;
-                }
-            }
-            
-            let K = 'Prev';
-            if (abaAtiva === 'manutencao') K = 'Mp';
-            else if (abaAtiva === 'corretiva') K = 'Mc';
-            else if (abaAtiva === 'reprogramada') K = 'Mr';
-            
-            const total = extrairNumeroElemento('kpi' + K + 'Count');
-            const areas = extrairNumeroElemento('kpi' + K + 'Areas');
-            const tags = extrairNumeroElemento('kpi' + K + 'Tags');
-            const percentual = extrairPercentualElemento('kpi' + K + 'Rate');
-            const realizados = extrairNumeroElemento('kpi' + K + 'Done');
-            
-            let pendentes = 0;
-            let naoRealizados = 0;
-            
-            if (abaAtiva === 'reprogramada') {
-                pendentes = extrairNumeroElemento('kpi' + K + 'Pending');
-                naoRealizados = extrairNumeroElemento('kpi' + K + 'Reprogramado');
-            } else {
-                pendentes = extrairNumeroElemento('kpi' + K + 'Pending');
-                naoRealizados = extrairNumeroElemento('kpi' + K + 'NotDone');
-            }
-            
-            return {
-                totalRegistros: total || 0,
-                areasDistintas: areas || 0,
-                tagsDistintas: tags || 0,
-                percentualRealizado: percentual || 0,
-                realizados: realizados || 0,
-                pendentes: pendentes || 0,
-                naoRealizados: naoRealizados || 0,
-                abaAtiva: abaAtiva
-            };
-            
-        } catch (e) {
-            console.warn('Erro ao coletar dados:', e);
-            return {
-                totalRegistros: 0,
-                areasDistintas: 0,
-                tagsDistintas: 0,
-                percentualRealizado: 0,
-                realizados: 0,
-                pendentes: 0,
-                naoRealizados: 0,
-                abaAtiva: 'preventiva'
-            };
-        }
-    }
-    
-    async function tentarIniciarSensor() {
-        tentativas++;
-        
-        if (typeof firebase === 'undefined') {
-            if (tentativas < MAX_TENTATIVAS) {
-                console.log(`⏳ Aguardando Firebase... (${tentativas}/${MAX_TENTATIVAS})`);
-                setTimeout(tentarIniciarSensor, 1000);
-                return;
-            } else {
-                console.log('⚠️ Firebase não disponível - operando em modo local');
-                setInterval(() => {
-                    const dados = coletarDadosReais();
-                    console.log('📊 Dados locais:', {
-                        total: dados.totalRegistros,
-                        realizadas: dados.realizados,
-                        percentual: dados.percentualRealizado + '%'
-                    });
-                }, 30000);
-                return;
-            }
-        }
-        
-        try {
-            // Inicializa app Firebase se necessário
-            let app;
-            if (!firebase.apps.length) {
-                app = firebase.initializeApp(firebaseConfig);
-            } else {
-                app = firebase.app();
-            }
-            
-            // Tenta usar Realtime Database primeiro
-            let db;
-            try {
-                if (firebase.database) {
-                    db = firebase.database();
-                    console.log('✅ Realtime Database conectado');
-                    usandoFirestore = false;
-                } else {
-                    // Se não tiver database, tenta carregar o script
-                    await carregarScriptRealtime();
-                    db = firebase.database();
-                    console.log('✅ Realtime Database carregado e conectado');
-                    usandoFirestore = false;
-                }
-            } catch (e) {
-                console.warn('⚠️ Realtime Database não disponível, usando Firestore como fallback');
-                // Fallback para Firestore
-                db = firebase.firestore();
-                usandoFirestore = true;
-            }
-            
-            function enviarDados() {
-                const dados = coletarDadosReais();
-                
-                if (dados.totalRegistros === 0 && dados.realizados === 0) {
-                    console.log('⏳ Nenhum dado encontrado. Aguardando importação...');
-                    return;
-                }
-                
-                const payload = {
-                    sistema: SISTEMA_ID,
-                    valores: [
-                        dados.percentualRealizado || 0,
-                        dados.totalRegistros || 0,
-                        dados.pendentes || 0
-                    ],
-                    dadosCompletos: {
-                        total: dados.totalRegistros,
-                        realizadas: dados.realizados,
-                        pendentes: dados.pendentes,
-                        naoRealizados: dados.naoRealizados,
-                        areasDistintas: dados.areasDistintas,
-                        tagsDistintas: dados.tagsDistintas,
-                        percentual: dados.percentualRealizado,
-                        abaAtiva: dados.abaAtiva,
-                        timestamp: Date.now(),
-                        dataHora: new Date().toLocaleString('pt-BR')
-                    },
-                    timestamp: Date.now()
-                };
-                
-                if (usandoFirestore) {
-                    // Usa Firestore
-                    db.collection('sensores').doc(SISTEMA_ID).set(payload)
-                        .then(() => {
-                            console.log('🟢 [Firestore] Dados enviados:', {
-                                total: dados.totalRegistros,
-                                realizadas: dados.realizados,
-                                percentual: dados.percentualRealizado + '%'
-                            });
-                        })
-                        .catch(err => console.error('❌ Erro no Firestore:', err));
-                } else {
-                    // Usa Realtime Database
-                    db.ref('sensores/' + SISTEMA_ID).set(payload)
-                        .then(() => {
-                            console.log('🟢 [Realtime] Dados enviados:', {
-                                total: dados.totalRegistros,
-                                realizadas: dados.realizados,
-                                percentual: dados.percentualRealizado + '%',
-                                aba: dados.abaAtiva
-                            });
-                        })
-                        .catch(err => console.error('❌ Erro no Realtime:', err));
-                }
-            }
-            
-            // Primeiro envio após 3 segundos
-            setTimeout(enviarDados, 3000);
-            // Depois a cada 30 segundos
-            setInterval(enviarDados, 30000);
-            
-            console.log(`✅ Sensor Produção operacional! (usando ${usandoFirestore ? 'Firestore' : 'Realtime Database'})`);
-            
-        } catch (e) {
-            console.error('❌ Erro crítico no sensor:', e);
-            // Tenta novamente em 5 segundos
-            setTimeout(tentarIniciarSensor, 5000);
-        }
-    }
-    
-    // Inicia o processo
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => setTimeout(tentarIniciarSensor, 1500));
-    } else {
-        setTimeout(tentarIniciarSensor, 1500);
-    }
-})();
-</script>
-</script>
 </body>
 </html>
