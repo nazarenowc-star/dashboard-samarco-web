@@ -84,6 +84,43 @@
     .form-label { font-weight: 600; font-size: 0.8rem; color: var(--ink); margin-bottom: 0.35rem; }
     .form-control, .form-select { border-radius: 8px; border: 1px solid var(--line); font-size: 0.85rem; }
     .form-control:focus, .form-select:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(0,76,151,0.1); }
+    
+    /* Status indicator */
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    .status-online {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .status-offline {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    .status-online .status-dot {
+      background: #10b981;
+    }
+    .status-offline .status-dot {
+      background: #ef4444;
+      animation: none;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
   </style>
 
   <style>
@@ -115,7 +152,12 @@
         <p class="text-muted m-0" style="font-size: 0.85rem;">Gestão de Programação — Preventiva, Manutenção e Reprogramada</p>
       </div>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 align-items-center">
+      <!-- Status Indicator -->
+      <div id="connectionStatus" class="status-indicator status-offline">
+        <span class="status-dot"></span>
+        <span id="statusText">Offline</span>
+      </div>
       <button id="btnBackup" class="btn btn-outline-secondary btn-sm">
         <i class="fa-solid fa-download"></i> Backup JSON
       </button>
@@ -407,11 +449,61 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<!-- Firebase App (the core Firebase SDK) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!-- Firebase Realtime Database -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
 <script>
-// ==================== CONFIGURAÇÃO ====================
+// ==================== CONFIGURAÇÃO UNIFICADA FIREBASE ====================
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDneReMjO78JqJ-LvmSTiQqUMkxT97H6JE",
+  authDomain: "naza-auditoria-hub.firebaseapp.com",
+  databaseURL: "https://naza-auditoria-hub-default-rtdb.firebaseio.com",
+  projectId: "naza-auditoria-hub",
+  storageBucket: "naza-auditoria-hub.firebasestorage.app",
+  messagingSenderId: "61590124044",
+  appId: "1:61590124044:web:4a29cc3cf74dc5bb426029"
+};
+
+// Inicializa Firebase uma única vez
+let firebaseApp = null;
+let firebaseDB = null;
+
+function initFirebase() {
+  try {
+    if (!firebase.apps.length) {
+      firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+    } else {
+      firebaseApp = firebase.app();
+    }
+    firebaseDB = firebase.database();
+    console.log('✅ Firebase Realtime Database conectado com sucesso');
+    updateConnectionStatus(true);
+    return true;
+  } catch (error) {
+    console.error('❌ Erro ao inicializar Firebase:', error);
+    updateConnectionStatus(false);
+    return false;
+  }
+}
+
+function updateConnectionStatus(online) {
+  const statusEl = document.getElementById('connectionStatus');
+  const statusText = document.getElementById('statusText');
+  if (statusEl && statusText) {
+    if (online) {
+      statusEl.className = 'status-indicator status-online';
+      statusText.textContent = 'Online';
+    } else {
+      statusEl.className = 'status-indicator status-offline';
+      statusText.textContent = 'Offline';
+    }
+  }
+}
+
+// ==================== CONFIGURAÇÃO DA APLICAÇÃO ====================
 const CONFIG = {
   STORAGE_KEYS: {
     PREVENTIVA: 'samarco_prev_data',
@@ -456,120 +548,119 @@ let appState = {
   currentTab: 'preventiva'
 };
 
-// ==================== FIREBASE / NUVEM ====================
-const CLOUD_SYNC = {
+// ==================== SISTEMA DE SINCRONIZAÇÃO EM TEMPO REAL ====================
+const RealtimeSync = {
   enabled: false,
-  db: null,
-  initialized: false,
-  collectionMap: {
-    preventiva: 'preventiva',
-    manutencao: 'manutencao_programada',
-    corretiva: 'manutencao_corretiva',
-    reprogramada: 'manutencao_reprogramada'
-  },
+  listeners: {},
   saveTimers: {},
-  firebaseConfig: {
-    apiKey: "AIzaSyBNajHs7TM8YEcIneqVE5q2zRG__azrgeo",
-    authDomain: "dashboard-samarco.firebaseapp.com",
-    projectId: "dashboard-samarco",
-    storageBucket: "dashboard-samarco.firebasestorage.app",
-    messagingSenderId: "61590124044",
-    appId: "1:61590124044:web:4a29cc3cf74dc5bb426029"
-  },
-  async init() {
-    if (this.initialized) return this.enabled;
-    this.initialized = true;
-    try {
-      if (!window.firebase || !firebase.firestore) throw new Error('Firebase indisponível');
-      if (!firebase.apps.length) firebase.initializeApp(this.firebaseConfig);
-      this.db = firebase.firestore();
-      this.enabled = true;
-      await this.bootstrapCollections();
-      return true;
-    } catch (error) {
-      console.warn('Firebase não inicializado. Operando somente local.', error);
-      this.enabled = false;
-      return false;
+  
+  init() {
+    this.enabled = initFirebase();
+    if (this.enabled) {
+      this.setupPresence();
+      this.subscribeAll();
     }
+    return this.enabled;
   },
-  async bootstrapCollections() {
-    const ops = Object.entries(this.collectionMap).map(([type, collection]) =>
-      this.db.collection(collection).doc('state').set({
-        type,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        items: []
-      }, { merge: true })
-    );
-    await Promise.all(ops);
+  
+  setupPresence() {
+    // Monitora estado da conexão
+    const connectedRef = firebaseDB.ref('.info/connected');
+    connectedRef.on('value', (snap) => {
+      if (snap.val() === true) {
+        updateConnectionStatus(true);
+        console.log('🟢 Conectado ao Realtime Database');
+      } else {
+        updateConnectionStatus(false);
+        console.log('🔴 Desconectado do Realtime Database');
+      }
+    });
   },
-  serializeRecord(record) {
-    const out = { ...record };
-    if (out.DATA instanceof Date) out.DATA = out.DATA.toISOString();
-    else if (out.DATA && typeof out.DATA?.toDate === 'function') out.DATA = out.DATA.toDate().toISOString();
-    return out;
+  
+  getRef(type) {
+    return firebaseDB.ref('dashboard_samarco/' + type);
   },
-  deserializeRecord(record) {
-    const out = { ...record };
-    if (out.DATA) out.DATA = new Date(out.DATA);
-    return out;
-  },
-  async loadFromCloud(type) {
-    if (!this.enabled) return null;
-    try {
-      const collection = this.collectionMap[type];
-      const snap = await this.db.collection(collection).doc('state').get();
-      if (!snap.exists) return [];
-      const data = snap.data() || {};
-      const items = Array.isArray(data.items) ? data.items : [];
-      return items.map(item => this.deserializeRecord(item));
-    } catch (error) {
-      console.warn('Falha ao ler nuvem de', type, error);
-      return null;
-    }
-  },
-  async syncType(type) {
-    const cloudItems = await this.loadFromCloud(type);
-    if (cloudItems === null) return;
-    if (cloudItems.length > 0 || appState[type].data.length === 0) {
-      appState[type].data = cloudItems;
-      appState[type].filtered = [...cloudItems];
-      localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(appState[type].data));
-      if (window.UI && typeof UI.updateFilters === 'function') UI.updateFilters(type);
-      if (window.DataManager && typeof DataManager.applyFilters === 'function') DataManager.applyFilters(type);
-    } else if (appState[type].data.length > 0) {
-      this.queueSave(type, 50);
-    }
-  },
-  async syncAll() {
+  
+  subscribeAll() {
     if (!this.enabled) return;
-    for (const type of Object.keys(this.collectionMap)) {
-      await this.syncType(type);
-    }
+    ['preventiva', 'manutencao', 'corretiva', 'reprogramada'].forEach(type => {
+      this.subscribeType(type);
+    });
   },
-  queueSave(type, delay = 700) {
+  
+  subscribeType(type) {
+    if (!this.enabled || this.listeners[type]) return;
+    
+    const ref = this.getRef(type);
+    this.listeners[type] = ref.on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.items) {
+        // Verifica se os dados locais são mais recentes
+        const localData = appState[type].data;
+        const localTimestamp = localData.length > 0 ? Math.max(...localData.map(r => r._timestamp || 0)) : 0;
+        const remoteTimestamp = data.lastUpdate || 0;
+        
+        if (remoteTimestamp > localTimestamp) {
+          console.log(`📥 Dados remotos mais recentes recebidos para ${type}`);
+          this.applyRemoteData(type, data.items);
+        }
+      }
+    }, (error) => {
+      console.error(`Erro ao sincronizar ${type}:`, error);
+    });
+  },
+  
+  applyRemoteData(type, items) {
+    appState[type].data = items.map(item => ({
+      ...item,
+      DATA: item.DATA ? new Date(item.DATA) : null
+    }));
+    appState[type].filtered = [...appState[type].data];
+    
+    // Atualiza UI
+    if (window.UI) {
+      UI.updateFilters(type);
+      UI.updateTable(type);
+      UI.updateKPIs(type);
+      UI.updateCharts(type);
+    }
+    
+    // Salva localmente também
+    localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(appState[type].data));
+  },
+  
+  queueSave(type, delay = 1000) {
     if (!this.enabled) return;
     clearTimeout(this.saveTimers[type]);
     this.saveTimers[type] = setTimeout(() => {
       this.saveType(type);
     }, delay);
   },
-  async saveType(type) {
+  
+  saveType(type) {
     if (!this.enabled) return;
-    try {
-      const collection = this.collectionMap[type];
-      const items = (appState[type]?.data || []).map(item => this.serializeRecord(item));
-      await this.db.collection(collection).doc('state').set({
-        type,
-        items,
-        count: items.length,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAtClient: new Date().toISOString(),
-        source: 'dashboard-samarco-web'
-      }, { merge: true });
-    } catch (error) {
-      console.warn('Falha ao salvar nuvem de', type, error);
-    }
+    
+    const items = appState[type].data.map(item => ({
+      ...item,
+      DATA: item.DATA ? item.DATA.toISOString() : null,
+      _timestamp: Date.now()
+    }));
+    
+    const ref = this.getRef(type);
+    ref.set({
+      items: items,
+      lastUpdate: Date.now(),
+      source: 'dashboard-samarco-web'
+    }).then(() => {
+      console.log(`💾 Dados de ${type} salvos na nuvem`);
+    }).catch((error) => {
+      console.error(`Erro ao salvar ${type}:`, error);
+    });
+  },
+  
+  forceSync(type) {
+    if (!this.enabled) return Promise.resolve();
+    return this.saveType(type);
   }
 };
 
@@ -578,6 +669,11 @@ const Utils = {
   showLoading() { document.getElementById('loading').classList.add('show'); },
   hideLoading() { document.getElementById('loading').classList.remove('show'); },
   showAlert(message) { alert(message); },
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  },
   norm(str) { 
     return (str ?? '')
       .toString()
@@ -590,7 +686,6 @@ const Utils = {
     if (!value && value !== 0) return null;
     if (value instanceof Date) return value;
     
-    // Excel serial date
     if (typeof value === 'number') {
       const epoch = new Date(Date.UTC(1899, 11, 30));
       return new Date(epoch.getTime() + value * 86400 * 1000);
@@ -599,13 +694,11 @@ const Utils = {
     const str = String(value).trim();
     if (!str) return null;
     
-    // ISO format: YYYY-MM-DD
     let match = str.match(/(\d{4})-(\d{2})-(\d{2})/);
     if (match) {
       return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
     }
     
-    // Brazilian format: DD/MM/YYYY
     match = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
     if (match) {
       const day = parseInt(match[1]);
@@ -662,6 +755,7 @@ const DataManager = {
     }
     return allRows;
   },
+  
   async processExcel(arrayBuffer, type) {
     const workbook = XLSX.read(arrayBuffer, { type: 'array' });
     const sheetNames = workbook.SheetNames;
@@ -710,11 +804,13 @@ const DataManager = {
     }
     return data;
   },
+  
   save(type) { 
     const key = CONFIG.STORAGE_KEYS[type.toUpperCase()]; 
     localStorage.setItem(key, JSON.stringify(appState[type].data)); 
-    CLOUD_SYNC.queueSave(type);
+    RealtimeSync.queueSave(type);
   },
+  
   load(type) {
     try {
       const key = CONFIG.STORAGE_KEYS[type.toUpperCase()];
@@ -727,6 +823,7 @@ const DataManager = {
       appState[type].filtered = []; 
     }
   },
+  
   backup() {
     const payload = {
       preventiva: appState.preventiva.data,
@@ -743,6 +840,7 @@ const DataManager = {
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   },
+  
   async restore(file) {
     if (!file) return;
     try {
@@ -765,6 +863,7 @@ const DataManager = {
       Utils.showAlert('Erro ao restaurar backup: ' + e.message); 
     }
   },
+  
   applyFilters(type) {
     const prefix = type === 'preventiva' ? 'prev' : (type === 'manutencao' ? 'mp' : (type === 'corretiva' ? 'mc' : 'mr'));
     const dateStart = document.getElementById(prefix + 'DateStart').value;
@@ -795,6 +894,7 @@ const DataManager = {
     UI.updateKPIs(type); 
     UI.updateCharts(type);
   },
+  
   clearFilters(type) {
     const prefix = type === 'preventiva' ? 'prev' : (type === 'manutencao' ? 'mp' : (type === 'corretiva' ? 'mc' : 'mr'));
     document.getElementById(prefix + 'DateStart').value = '';
@@ -804,6 +904,7 @@ const DataManager = {
     document.getElementById(prefix + 'Situacao').value = '';
     this.applyFilters(type);
   },
+  
   deleteSelected(type) {
     const bodyId = (type === 'preventiva') ? 'preventivaBody' : 
                    (type === 'manutencao') ? 'manutencaoBody' : 
@@ -822,6 +923,7 @@ const DataManager = {
     this.applyFilters(type);
     Utils.showAlert('Registros excluídos com sucesso!');
   },
+  
   deleteAll(type) {
     if (!confirm('Excluir TODOS os registros desta aba? Esta ação não pode ser desfeita.')) return;
     appState[type].data = []; 
@@ -829,6 +931,7 @@ const DataManager = {
     this.applyFilters(type);
     Utils.showAlert('Todos os registros foram excluídos!');
   },
+  
   export(type) {
     const rows = appState[type].filtered;
     if (!rows.length) { 
@@ -852,9 +955,11 @@ const UI = {
     DataManager.applyFilters('manutencao'); 
     DataManager.applyFilters('corretiva');
     DataManager.applyFilters('reprogramada');
-    await CLOUD_SYNC.init();
-    await CLOUD_SYNC.syncAll();
+    
+    // Inicializa sincronização em tempo real
+    await RealtimeSync.init();
   },
+  
   setupEventListeners() {
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', (e) => this.switchTab(e.currentTarget.dataset.tab));
@@ -877,7 +982,6 @@ const UI = {
     document.getElementById('btnPrevDeleteAll').addEventListener('click', () => DataManager.deleteAll('preventiva'));
     document.getElementById('prevRefresh').addEventListener('click', () => DataManager.applyFilters('preventiva'));
     document.getElementById('prevClear').addEventListener('click', () => DataManager.clearFilters('preventiva'));
-    document.getElementById('btnPrevExportPNG').addEventListener('click', () => Utils.__exportDashboardPNG10 && Utils.__exportDashboardPNG10('preventiva'));
 
     // Manutenção Programada
     document.getElementById('inputMP').addEventListener('change', async (e) => {
@@ -896,7 +1000,6 @@ const UI = {
     document.getElementById('btnMpDeleteAll').addEventListener('click', () => DataManager.deleteAll('manutencao'));
     document.getElementById('mpRefresh').addEventListener('click', () => DataManager.applyFilters('manutencao'));
     document.getElementById('mpClear').addEventListener('click', () => DataManager.clearFilters('manutencao'));
-    document.getElementById('btnMPExportPNG').addEventListener('click', () => Utils.__exportDashboardPNG10 && Utils.__exportDashboardPNG10('manutencao'));
 
     // Manutenção Corretiva
     document.getElementById('inputMC').addEventListener('change', async (e) => {
@@ -915,7 +1018,6 @@ const UI = {
     document.getElementById('btnMcDeleteAll').addEventListener('click', () => DataManager.deleteAll('corretiva'));
     document.getElementById('mcRefresh').addEventListener('click', () => DataManager.applyFilters('corretiva'));
     document.getElementById('mcClear').addEventListener('click', () => DataManager.clearFilters('corretiva'));
-    document.getElementById('btnMCExportPNG').addEventListener('click', () => Utils.__exportDashboardPNG10 && Utils.__exportDashboardPNG10('corretiva'));
 
     // Manutenção Reprogramada
     document.getElementById('inputMR').addEventListener('change', async (e) => {
@@ -934,7 +1036,6 @@ const UI = {
     document.getElementById('btnMrDeleteAll').addEventListener('click', () => DataManager.deleteAll('reprogramada'));
     document.getElementById('mrRefresh').addEventListener('click', () => DataManager.applyFilters('reprogramada'));
     document.getElementById('mrClear').addEventListener('click', () => DataManager.clearFilters('reprogramada'));
-    document.getElementById('btnMRExportPNG').addEventListener('click', () => Utils.__exportDashboardPNG10 && Utils.__exportDashboardPNG10('reprogramada'));
 
     // Backup/Restore
     document.getElementById('btnBackup').addEventListener('click', () => DataManager.backup());
@@ -945,6 +1046,7 @@ const UI = {
       }
     });
   },
+  
   switchTab(tab) {
     appState.currentTab = tab;
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -954,6 +1056,7 @@ const UI = {
       content.style.display = (content.id === 'tab-' + tab) ? 'block' : 'none';
     });
   },
+  
   updateFilters(type) {
     const prefix = type === 'preventiva' ? 'prev' : (type === 'manutencao' ? 'mp' : (type === 'corretiva' ? 'mc' : 'mr'));
     const areaSel = document.getElementById(prefix + 'Area');
@@ -1020,6 +1123,7 @@ const UI = {
     }
     this.updateFilterOptions(type);
   },
+  
   updateFilterOptions(type) {
     const prefix = type === 'preventiva' ? 'prev' : 
                    (type === 'manutencao' ? 'mp' : 
@@ -1048,6 +1152,7 @@ const UI = {
       tagSelect.appendChild(o); 
     }
   },
+  
   updateKPIs(type) {
     const K = type === 'preventiva' ? 'Prev' : 
               (type === 'manutencao' ? 'Mp' : 
@@ -1085,6 +1190,7 @@ const UI = {
       document.getElementById('kpi' + K + 'NotDone').textContent = naoRealizados;
     }
   },
+  
   updateCharts(type) {
     const prefix = type === 'preventiva' ? 'prev' : 
                    (type === 'manutencao' ? 'mp' : 
@@ -1095,6 +1201,7 @@ const UI = {
     this.updateParetoChart(type, prefix, data);
     this.updateStatusChart(type, prefix, data);
   },
+  
   updateByAreaChart(type, prefix, data) {
     const canvas = document.getElementById(prefix + 'ByArea'); 
     if (!canvas) return; 
@@ -1127,6 +1234,7 @@ const UI = {
       }
     });
   },
+  
   updateTimelineChart(type, prefix, data) {
     const canvas = document.getElementById(prefix + 'Timeline'); 
     if (!canvas) return; 
@@ -1166,6 +1274,7 @@ const UI = {
       }
     });
   },
+  
   updateParetoChart(type, prefix, data) {
     const canvas = document.getElementById(prefix + 'Pareto'); 
     if (!canvas) return; 
@@ -1177,9 +1286,7 @@ const UI = {
       tagCount[t] = (tagCount[t] || 0) + 1; 
     }
     
-    // MODIFICAÇÃO AQUI: Mostrar TODOS os equipamentos, não apenas os top 10
     const sorted = Object.entries(tagCount).sort((a, b) => b[1] - a[1]);
-    // Remover o .slice(0, 10) para mostrar todos os equipamentos
     const labels = sorted.map(t => t[0]); 
     const values = sorted.map(t => t[1]);
     const total = values.reduce((s, v) => s + v, 0); 
@@ -1263,6 +1370,7 @@ const UI = {
       }
     });
   },
+  
   updateStatusChart(type, prefix, data) {
     const canvas = document.getElementById(prefix + 'Status'); 
     if (!canvas) return; 
@@ -1321,7 +1429,7 @@ const UI = {
 document.addEventListener('DOMContentLoaded', () => { UI.init(); });
 </script>
 
-<!-- === BEGIN: Export PNG Paginado (mantido e ampliado para 4 abas) === -->
+<!-- Export PNG Paginado -->
 <script>
 (function(){
   if (!window.Utils) { window.Utils = {}; }
@@ -1515,11 +1623,7 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
     if (bMc)   bMc.onclick   = () => exportDashboardPNG('corretiva');
     if (bMr)   bMr.onclick   = () => exportDashboardPNG('reprogramada');
   });
-
-  Utils.__exportDashboardPNG10 = exportDashboardPNG;
 })();
 </script>
-<!-- === END: Export PNG Paginado === -->
-
 </body>
 </html>
