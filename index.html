@@ -322,7 +322,6 @@
       </div>
     </div>
   </div>
-
   <!-- Manutenção Corretiva Tab -->
   <div id="tab-corretiva" class="tab-content" style="display:none">
     <div class="app-card p-4">
@@ -453,7 +452,7 @@
 <!-- Firebase App (the core Firebase SDK) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <!-- Firebase Realtime Database -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
 // ==================== CONFIGURAÇÃO UNIFICADA FIREBASE ====================
@@ -462,63 +461,32 @@ const FIREBASE_CONFIG = {
   authDomain: "naza-auditoria-hub.firebaseapp.com",
   databaseURL: "https://naza-auditoria-hub-default-rtdb.firebaseio.com",
   projectId: "naza-auditoria-hub",
-  storageBucket: "naza-auditoria-hub.appspot.com",  // ✅ CORRIGIDO
+  storageBucket: "naza-auditoria-hub.firebasestorage.app",
   messagingSenderId: "61590124044",
   appId: "1:61590124044:web:4a29cc3cf74dc5bb426029"
 };
 
-// Inicializa Firebase com tratamento de erros melhorado
+// Inicializa Firebase uma única vez
 let firebaseApp = null;
 let firebaseDB = null;
-let reconnectAttempts = 0;
-const MAX_RECONNECT = 5;
+let firebaseFirestore = null;
 
 function initFirebase() {
-  return new Promise((resolve) => {
-    try {
-      if (!firebase.apps.length) {
-        firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
-      } else {
-        firebaseApp = firebase.app();
-      }
-      
-      firebaseDB = firebase.database();
-      
-      // Testa a conexão explicitamente
-      const connectedRef = firebaseDB.ref('.info/connected');
-      connectedRef.on('value', (snap) => {
-        if (snap.val() === true) {
-          console.log('✅ Firebase Realtime Database conectado com sucesso');
-          updateConnectionStatus(true);
-          reconnectAttempts = 0; // Reset contador
-          resolve(true);
-        } else {
-          console.warn('⚠️ Firebase desconectado, tentando reconectar...');
-          updateConnectionStatus(false);
-          
-          // Tenta reconectar automaticamente
-          if (reconnectAttempts < MAX_RECONNECT) {
-            reconnectAttempts++;
-            setTimeout(() => {
-              console.log(`🔄 Tentativa de reconexão ${reconnectAttempts}/${MAX_RECONNECT}`);
-              initFirebase();
-            }, 2000 * reconnectAttempts);
-          }
-        }
-      }, (error) => {
-        console.error('❌ Erro no monitor de conexão:', error);
-        updateConnectionStatus(false);
-        resolve(false);
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('❌ Erro ao inicializar Firebase:', error);
-      updateConnectionStatus(false);
-      resolve(false);
-      return false;
+  try {
+    if (!firebase.apps.length) {
+      firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+    } else {
+      firebaseApp = firebase.app();
     }
-  });
+    firebaseFirestore = firebase.firestore();
+    console.log('✅ Firebase Firestore conectado com sucesso');
+    updateConnectionStatus(true);
+    return true;
+  } catch (error) {
+    console.error('❌ Erro ao inicializar Firebase:', error);
+    updateConnectionStatus(false);
+    return false;
+  }
 }
 
 function updateConnectionStatus(online) {
@@ -580,120 +548,137 @@ let appState = {
   currentTab: 'preventiva'
 };
 
-// ==================== SISTEMA DE SINCRONIZAÇÃO EM TEMPO REAL ====================
+// ==================== SISTEMA DE SINCRONIZAÇÃO COM FIRESTORE ====================
 const RealtimeSync = {
   enabled: false,
   listeners: {},
   saveTimers: {},
-  
+  collectionMap: {
+    preventiva: 'preventiva',
+    manutencao: 'manutencao_programada',
+    corretiva: 'manutencao_corretiva',
+    reprogramada: 'manutencao_reprogramada'
+  },
+
   init() {
-    return initFirebase().then((success) => {
-      this.enabled = success;
-      if (this.enabled) {
-        this.setupPresence();
-        this.subscribeAll();
-      }
-      return this.enabled;
-    });
+    this.enabled = initFirebase();
+    if (this.enabled) {
+      updateConnectionStatus(true);
+      this.subscribeAll();
+    }
+    return this.enabled;
   },
-  
-  setupPresence() {
-    // Monitora estado da conexão
-    const connectedRef = firebaseDB.ref('.info/connected');
-    connectedRef.on('value', (snap) => {
-      if (snap.val() === true) {
-        updateConnectionStatus(true);
-        console.log('🟢 Conectado ao Realtime Database');
-      } else {
-        updateConnectionStatus(false);
-        console.log('🔴 Desconectado do Realtime Database');
-      }
-    });
+
+  getDocRef(type) {
+    const collectionName = this.collectionMap[type] || type;
+    return firebaseFirestore.collection(collectionName).doc('state');
   },
-  
-  getRef(type) {
-    return firebaseDB.ref('dashboard_samarco/' + type);
-  },
-  
+
   subscribeAll() {
     if (!this.enabled) return;
     ['preventiva', 'manutencao', 'corretiva', 'reprogramada'].forEach(type => {
       this.subscribeType(type);
     });
   },
-  
+
   subscribeType(type) {
     if (!this.enabled || this.listeners[type]) return;
-    
-    const ref = this.getRef(type);
-    this.listeners[type] = ref.on('value', (snapshot) => {
-      const data = snapshot.val();
-      if (data && data.items) {
-        // Verifica se os dados locais são mais recentes
-        const localData = appState[type].data;
-        const localTimestamp = localData.length > 0 ? Math.max(...localData.map(r => r._timestamp || 0)) : 0;
-        const remoteTimestamp = data.lastUpdate || 0;
-        
-        if (remoteTimestamp > localTimestamp) {
-          console.log(`📥 Dados remotos mais recentes recebidos para ${type}`);
-          this.applyRemoteData(type, data.items);
-        }
+
+    const ref = this.getDocRef(type);
+    this.listeners[type] = ref.onSnapshot((snapshot) => {
+      if (!snapshot.exists) return;
+      const data = snapshot.data() || {};
+      const items = Array.isArray(data.items) ? data.items : [];
+      const remoteUpdated = this.extractTimestamp(data.updatedAt || data.createdAt || data.lastUpdate);
+      const localUpdated = this.getLocalTimestamp(type);
+
+      if (items.length && remoteUpdated >= localUpdated) {
+        console.log(`📥 Dados do Firestore recebidos para ${type}:`, items.length);
+        this.applyRemoteData(type, items, remoteUpdated);
       }
     }, (error) => {
-      console.error(`Erro ao sincronizar ${type}:`, error);
+      console.error(`Erro ao sincronizar ${type} no Firestore:`, error);
+      updateConnectionStatus(false);
     });
   },
-  
-  applyRemoteData(type, items) {
-    appState[type].data = items.map(item => ({
+
+  extractTimestamp(value) {
+    if (!value) return 0;
+    if (typeof value === 'number') return value;
+    if (typeof value?.toMillis === 'function') return value.toMillis();
+    if (typeof value?.seconds === 'number') return value.seconds * 1000;
+    const parsed = new Date(value).getTime();
+    return Number.isFinite(parsed) ? parsed : 0;
+  },
+
+  getLocalTimestamp(type) {
+    const localData = appState[type]?.data || [];
+    return localData.reduce((max, row) => Math.max(max, Number(row._updatedAtMs || row._timestamp || 0)), 0);
+  },
+
+  normalizeItemsForCloud(type) {
+    const now = Date.now();
+    return (appState[type].data || []).map(item => ({
       ...item,
-      DATA: item.DATA ? new Date(item.DATA) : null
+      DATA: item.DATA ? new Date(item.DATA).toISOString() : null,
+      SITUACAO: (item.SITUACAO || '').toString().trim(),
+      _updatedAtMs: now
+    }));
+  },
+
+  applyRemoteData(type, items, remoteUpdated = Date.now()) {
+    appState[type].data = (items || []).map(item => ({
+      ...item,
+      DATA: item.DATA ? new Date(item.DATA) : null,
+      _updatedAtMs: Number(item._updatedAtMs || remoteUpdated || Date.now())
     }));
     appState[type].filtered = [...appState[type].data];
-    
-    // Atualiza UI
+
     if (window.UI) {
       UI.updateFilters(type);
       UI.updateTable(type);
       UI.updateKPIs(type);
       UI.updateCharts(type);
     }
-    
-    // Salva localmente também
+
     localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(appState[type].data));
   },
-  
-  queueSave(type, delay = 1000) {
+
+  queueSave(type, delay = 700) {
     if (!this.enabled) return;
     clearTimeout(this.saveTimers[type]);
     this.saveTimers[type] = setTimeout(() => {
       this.saveType(type);
     }, delay);
   },
-  
-  saveType(type) {
+
+  async saveType(type) {
     if (!this.enabled) return;
-    
-    const items = appState[type].data.map(item => ({
-      ...item,
-      DATA: item.DATA ? item.DATA.toISOString() : null,
-      _timestamp: Date.now()
-    }));
-    
-    const ref = this.getRef(type);
-    ref.set({
-      items: items,
-      lastUpdate: Date.now(),
-      source: 'dashboard-samarco-web'
-    }).then(() => {
-      console.log(`💾 Dados de ${type} salvos na nuvem`);
-    }).catch((error) => {
-      console.error(`Erro ao salvar ${type}:`, error);
-    });
+
+    const items = this.normalizeItemsForCloud(type);
+    const ref = this.getDocRef(type);
+    const payload = {
+      items,
+      count: items.length,
+      type,
+      source: 'dashboard-samarco-web',
+      schemaVersion: 'cloud-v2',
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAtClient: new Date().toISOString(),
+      lastUpdate: Date.now()
+    };
+
+    try {
+      await ref.set(payload, { merge: true });
+      console.log(`💾 Dados de ${type} salvos no Firestore (${items.length})`);
+      updateConnectionStatus(true);
+    } catch (error) {
+      console.error(`Erro ao salvar ${type} no Firestore:`, error);
+      updateConnectionStatus(false);
+    }
   },
-  
+
   forceSync(type) {
-    if (!this.enabled) return Promise.resolve();
     return this.saveType(type);
   }
 };
@@ -1311,7 +1296,7 @@ const UI = {
   
   updateParetoChart(type, prefix, data) {
     const canvas = document.getElementById(prefix + 'Pareto'); 
-    if (!canvas) return; 
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (appState[type].charts.pareto) appState[type].charts.pareto.destroy();
     const tagCount = {}; 
@@ -1658,128 +1643,6 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
     if (bMr)   bMr.onclick   = () => exportDashboardPNG('reprogramada');
   });
 })();
-</script>
-
-<!-- SENSOR NAZA PORTAL - COLETA DE DADOS DO DASHBOARD -->
-<script>
-(function() {
-    console.log('🔄 Iniciando sensor de coleta do Dashboard Samarco...');
-    
-    const SISTEMA_ID = 'producao';
-    const COLECAO = 'sensores';
-    
-    function extrairNumeroElemento(id) {
-        const el = document.getElementById(id);
-        if (!el) return 0;
-        const texto = el.textContent || '';
-        const match = texto.match(/\d+/);
-        return match ? parseInt(match[0]) : 0;
-    }
-    
-    function extrairPercentualElemento(id) {
-        const el = document.getElementById(id);
-        if (!el) return 0;
-        const texto = el.textContent || '';
-        const match = texto.match(/(\d+)%/);
-        return match ? parseInt(match[1]) : 0;
-    }
-    
-    function coletarDadosReais() {
-        try {
-            let abaAtiva = 'preventiva';
-            const tabs = document.querySelectorAll('.tab-btn');
-            for (const tab of tabs) {
-                if (tab.classList.contains('active')) {
-                    if (tab.dataset.tab) abaAtiva = tab.dataset.tab;
-                    break;
-                }
-            }
-            
-            let K = 'Prev';
-            if (abaAtiva === 'manutencao') K = 'Mp';
-            else if (abaAtiva === 'corretiva') K = 'Mc';
-            else if (abaAtiva === 'reprogramada') K = 'Mr';
-            
-            const total = extrairNumeroElemento('kpi' + K + 'Count');
-            const realizados = extrairNumeroElemento('kpi' + K + 'Done');
-            const pendentes = extrairNumeroElemento('kpi' + K + 'Pending');
-            const percentual = extrairPercentualElemento('kpi' + K + 'Rate');
-            
-            return {
-                totalRegistros: total || 0,
-                realizados: realizados || 0,
-                pendentes: pendentes || 0,
-                percentualRealizado: percentual || 0,
-                abaAtiva: abaAtiva,
-                timestamp: Date.now(),
-                dataHora: new Date().toLocaleString('pt-BR')
-            };
-        } catch (e) {
-            console.warn('Erro ao coletar dados:', e);
-            return null;
-        }
-    }
-    
-    function enviarDadosParaRealtime() {
-        // CORREÇÃO: verifica se firebaseDB existe globalmente
-        const db = typeof firebaseDB !== 'undefined' ? firebaseDB : 
-                   (typeof window.firebaseDB !== 'undefined' ? window.firebaseDB : null);
-        
-        if (!db) {
-            console.warn('⏳ Firebase DB não disponível, aguardando...');
-            return false;
-        }
-        
-        const dados = coletarDadosReais();
-        if (!dados || dados.totalRegistros === 0) {
-            console.log('⏳ Nenhum dado para enviar (importe uma planilha primeiro)');
-            return false;
-        }
-        
-        const payload = {
-            sistema: SISTEMA_ID,
-            valores: [
-                dados.percentualRealizado,
-                dados.totalRegistros,
-                dados.pendentes
-            ],
-            dadosCompletos: dados,
-            lastUpdate: Date.now()
-        };
-        
-        db.ref(COLECAO + '/' + SISTEMA_ID).set(payload)
-            .then(() => {
-                console.log('🟢 [SENSOR] Dados enviados:', {
-                    total: dados.totalRegistros,
-                    realizados: dados.realizados,
-                    percentual: dados.percentualRealizado + '%',
-                    aba: dados.abaAtiva
-                });
-            })
-            .catch(err => {
-                console.error('❌ [SENSOR] Erro ao enviar:', err);
-            });
-        
-        return true;
-    }
-    
-    // Inicia o sensor com verificação periódica
-    function iniciarSensor() {
-        // Tenta enviar imediatamente
-        if (enviarDadosParaRealtime()) {
-            console.log('✅ Sensor ativo - enviando dados a cada 30s');
-            // Configura intervalo após primeiro envio bem-sucedido
-            setInterval(enviarDadosParaRealtime, 30000);
-        } else {
-            console.log('⏳ Firebase não pronto ou sem dados, nova tentativa em 5s...');
-            setTimeout(iniciarSensor, 5000);
-        }
-    }
-    
-    // Inicia após 3 segundos
-    setTimeout(iniciarSensor, 3000);
-})();
-</script>
 </script>
 </body>
 </html>
