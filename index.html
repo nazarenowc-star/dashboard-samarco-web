@@ -85,7 +85,7 @@
     .form-control, .form-select { border-radius: 8px; border: 1px solid var(--line); font-size: 0.85rem; }
     .form-control:focus, .form-select:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(0,76,151,0.1); }
     
-    /* Status indicator */
+    /* Status indicator melhorado */
     .status-indicator {
       display: inline-flex;
       align-items: center;
@@ -104,6 +104,10 @@
       background: #fee2e2;
       color: #991b1b;
     }
+    .status-syncing {
+      background: #fef3c7;
+      color: #92400e;
+    }
     .status-dot {
       width: 8px;
       height: 8px;
@@ -117,9 +121,22 @@
       background: #ef4444;
       animation: none;
     }
+    .status-syncing .status-dot {
+      background: #f59e0b;
+      animation: spin 1s linear infinite;
+    }
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .last-update {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 0.25rem;
     }
   </style>
 
@@ -157,7 +174,11 @@
       <div id="connectionStatus" class="status-indicator status-offline">
         <span class="status-dot"></span>
         <span id="statusText">Offline</span>
+        <div class="last-update" id="lastUpdate"></div>
       </div>
+      <button id="btnSyncNow" class="btn btn-sm btn-outline-primary" title="Sincronizar Agora">
+        <i class="fa-solid fa-rotate"></i>
+      </button>
       <button id="btnBackup" class="btn btn-outline-secondary btn-sm">
         <i class="fa-solid fa-download"></i> Backup JSON
       </button>
@@ -470,6 +491,7 @@ const FIREBASE_CONFIG = {
 // Inicializa Firebase uma única vez
 let firebaseApp = null;
 let firebaseDB = null;
+let lastSyncTime = null;
 
 function initFirebase() {
   try {
@@ -489,17 +511,26 @@ function initFirebase() {
   }
 }
 
-function updateConnectionStatus(online) {
+function updateConnectionStatus(online, syncing = false) {
   const statusEl = document.getElementById('connectionStatus');
   const statusText = document.getElementById('statusText');
-  if (statusEl && statusText) {
-    if (online) {
-      statusEl.className = 'status-indicator status-online';
-      statusText.textContent = 'Online';
-    } else {
-      statusEl.className = 'status-indicator status-offline';
-      statusText.textContent = 'Offline';
+  const lastUpdateEl = document.getElementById('lastUpdate');
+  
+  if (!statusEl || !statusText) return;
+  
+  if (syncing) {
+    statusEl.className = 'status-indicator status-syncing';
+    statusText.textContent = 'Sincronizando...';
+  } else if (online) {
+    statusEl.className = 'status-indicator status-online';
+    statusText.textContent = 'Online';
+    if (lastSyncTime && lastUpdateEl) {
+      lastUpdateEl.textContent = 'Última sync: ' + lastSyncTime.toLocaleTimeString();
     }
+  } else {
+    statusEl.className = 'status-indicator status-offline';
+    statusText.textContent = 'Offline';
+    if (lastUpdateEl) lastUpdateEl.textContent = '';
   }
 }
 
@@ -552,24 +583,27 @@ let appState = {
 const RealtimeSync = {
   enabled: false,
   listeners: {},
-  saveTimers: {},
+  saveQueue: [],
+  isSaving: false,
   
   init() {
     this.enabled = initFirebase();
     if (this.enabled) {
       this.setupPresence();
       this.subscribeAll();
+      this.processSaveQueue();
     }
     return this.enabled;
   },
   
   setupPresence() {
-    // Monitora estado da conexão
     const connectedRef = firebaseDB.ref('.info/connected');
     connectedRef.on('value', (snap) => {
       if (snap.val() === true) {
         updateConnectionStatus(true);
         console.log('🟢 Conectado ao Realtime Database');
+        // Sincroniza imediatamente ao reconectar
+        this.syncAllTypes();
       } else {
         updateConnectionStatus(false);
         console.log('🔴 Desconectado do Realtime Database');
@@ -594,15 +628,14 @@ const RealtimeSync = {
     const ref = this.getRef(type);
     this.listeners[type] = ref.on('value', (snapshot) => {
       const data = snapshot.val();
-      if (data && data.items) {
-        // Verifica se os dados locais são mais recentes
-        const localData = appState[type].data;
-        const localTimestamp = localData.length > 0 ? Math.max(...localData.map(r => r._timestamp || 0)) : 0;
+      if (data && data.items && Array.isArray(data.items)) {
+        // Verifica se os dados remotos são mais recentes
         const remoteTimestamp = data.lastUpdate || 0;
+        const localTimestamp = this.getLocalTimestamp(type);
         
         if (remoteTimestamp > localTimestamp) {
           console.log(`📥 Dados remotos mais recentes recebidos para ${type}`);
-          this.applyRemoteData(type, data.items);
+          this.applyRemoteData(type, data.items, remoteTimestamp);
         }
       }
     }, (error) => {
@@ -610,14 +643,21 @@ const RealtimeSync = {
     });
   },
   
-  applyRemoteData(type, items) {
+  getLocalTimestamp(type) {
+    const data = appState[type].data;
+    if (!data || data.length === 0) return 0;
+    return Math.max(...data.map(r => r._timestamp || 0));
+  },
+  
+  applyRemoteData(type, items, timestamp) {
     appState[type].data = items.map(item => ({
       ...item,
-      DATA: item.DATA ? new Date(item.DATA) : null
+      DATA: item.DATA ? new Date(item.DATA) : null,
+      _timestamp: item._timestamp || timestamp
     }));
     appState[type].filtered = [...appState[type].data];
     
-    // Atualiza UI
+    // Atualiza UI imediatamente
     if (window.UI) {
       UI.updateFilters(type);
       UI.updateTable(type);
@@ -625,42 +665,82 @@ const RealtimeSync = {
       UI.updateCharts(type);
     }
     
-    // Salva localmente também
+    // Salva localmente
     localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(appState[type].data));
+    console.log(`✅ Dados de ${type} atualizados do servidor`);
   },
   
-  queueSave(type, delay = 1000) {
-    if (!this.enabled) return;
-    clearTimeout(this.saveTimers[type]);
-    this.saveTimers[type] = setTimeout(() => {
-      this.saveType(type);
-    }, delay);
-  },
-  
-  saveType(type) {
-    if (!this.enabled) return;
+  // Sincronização IMEDIATA - sem delay
+  async saveTypeImmediate(type) {
+    if (!this.enabled || !firebaseDB) {
+      console.warn(`⚠️ Firebase não disponível para salvar ${type}`);
+      return false;
+    }
     
-    const items = appState[type].data.map(item => ({
-      ...item,
-      DATA: item.DATA ? item.DATA.toISOString() : null,
-      _timestamp: Date.now()
-    }));
+    updateConnectionStatus(true, true); // Mostra "Sincronizando..."
     
-    const ref = this.getRef(type);
-    ref.set({
-      items: items,
-      lastUpdate: Date.now(),
-      source: 'dashboard-samarco-web'
-    }).then(() => {
-      console.log(`💾 Dados de ${type} salvos na nuvem`);
-    }).catch((error) => {
-      console.error(`Erro ao salvar ${type}:`, error);
-    });
+    try {
+      const items = appState[type].data.map(item => ({
+        ...item,
+        DATA: item.DATA ? item.DATA.toISOString() : null,
+        _timestamp: Date.now()
+      }));
+      
+      const ref = this.getRef(type);
+      await ref.set({
+        items: items,
+        lastUpdate: Date.now(),
+        updatedBy: 'dashboard-web',
+        version: '2.0'
+      });
+      
+      lastSyncTime = new Date();
+      updateConnectionStatus(true);
+      console.log(`✅ ${type} sincronizado imediatamente`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Erro ao sincronizar ${type}:`, error);
+      updateConnectionStatus(false);
+      return false;
+    }
   },
   
-  forceSync(type) {
-    if (!this.enabled) return Promise.resolve();
-    return this.saveType(type);
+  // Adiciona à fila e processa imediatamente
+  queueSave(type) {
+    if (!this.saveQueue.includes(type)) {
+      this.saveQueue.push(type);
+    }
+    this.processSaveQueue();
+  },
+  
+  async processSaveQueue() {
+    if (this.isSaving || this.saveQueue.length === 0) return;
+    
+    this.isSaving = true;
+    const type = this.saveQueue.shift();
+    
+    await this.saveTypeImmediate(type);
+    
+    this.isSaving = false;
+    
+    // Continua processando se houver mais na fila
+    if (this.saveQueue.length > 0) {
+      setTimeout(() => this.processSaveQueue(), 100);
+    }
+  },
+  
+  // Sincroniza todos os tipos
+  async syncAllTypes() {
+    for (const type of ['preventiva', 'manutencao', 'corretiva', 'reprogramada']) {
+      await this.saveTypeImmediate(type);
+    }
+  },
+  
+  // Força sincronização manual
+  async forceSync() {
+    console.log('🔄 Sincronização manual solicitada');
+    await this.syncAllTypes();
+    alert('Sincronização concluída!');
   }
 };
 
@@ -746,7 +826,12 @@ const DataManager = {
       try {
         const buffer = await file.arrayBuffer();
         const rows = await this.processExcel(buffer, type);
-        const enriched = rows.map(r => ({...r, _sourceFile: file.name, _importDate: new Date().toISOString()}));
+        const enriched = rows.map(r => ({
+          ...r, 
+          _sourceFile: file.name, 
+          _importDate: new Date().toISOString(),
+          _timestamp: Date.now()
+        }));
         allRows.push(...enriched);
       } catch(err) { 
         console.error(err); 
@@ -800,6 +885,7 @@ const DataManager = {
       obj.RESPONSAVEL = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.RESPONSAVEL);
       obj.OBSERVACAO = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.OBSERVACAO);
       obj._id = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      obj._timestamp = Date.now();
       data.push(obj);
     }
     return data;
@@ -808,6 +894,7 @@ const DataManager = {
   save(type) { 
     const key = CONFIG.STORAGE_KEYS[type.toUpperCase()]; 
     localStorage.setItem(key, JSON.stringify(appState[type].data)); 
+    // Sincroniza IMEDIATAMENTE com a nuvem
     RealtimeSync.queueSave(type);
   },
   
@@ -846,19 +933,34 @@ const DataManager = {
     try {
       const text = await file.text(); 
       const data = JSON.parse(text);
-      if (Array.isArray(data.preventiva)) appState.preventiva.data = data.preventiva;
-      if (Array.isArray(data.manutencao)) appState.manutencao.data = data.manutencao;
-      if (Array.isArray(data.corretiva))  appState.corretiva.data  = data.corretiva;
-      if (Array.isArray(data.reprogramada))  appState.reprogramada.data  = data.reprogramada;
+      if (Array.isArray(data.preventiva)) {
+        appState.preventiva.data = data.preventiva.map(r => ({...r, _timestamp: Date.now()}));
+      }
+      if (Array.isArray(data.manutencao)) {
+        appState.manutencao.data = data.manutencao.map(r => ({...r, _timestamp: Date.now()}));
+      }
+      if (Array.isArray(data.corretiva)) {
+        appState.corretiva.data = data.corretiva.map(r => ({...r, _timestamp: Date.now()}));
+      }
+      if (Array.isArray(data.reprogramada)) {
+        appState.reprogramada.data = data.reprogramada.map(r => ({...r, _timestamp: Date.now()}));
+      }
+      
+      // Salva local e sincroniza com nuvem IMEDIATAMENTE
       this.save('preventiva'); 
       this.save('manutencao'); 
       this.save('corretiva');
       this.save('reprogramada');
+      
       this.applyFilters('preventiva'); 
       this.applyFilters('manutencao'); 
       this.applyFilters('corretiva');
       this.applyFilters('reprogramada');
-      Utils.showAlert('Backup restaurado com sucesso!');
+      
+      // Força sincronização imediata
+      await RealtimeSync.syncAllTypes();
+      
+      Utils.showAlert('Backup restaurado e sincronizado com sucesso!');
     } catch(e) { 
       Utils.showAlert('Erro ao restaurar backup: ' + e.message); 
     }
@@ -947,10 +1049,13 @@ const DataManager = {
 const UI = {
   async init() {
     this.setupEventListeners();
+    
+    // Carrega dados locais primeiro
     DataManager.load('preventiva'); 
     DataManager.load('manutencao'); 
     DataManager.load('corretiva');
     DataManager.load('reprogramada');
+    
     DataManager.applyFilters('preventiva'); 
     DataManager.applyFilters('manutencao'); 
     DataManager.applyFilters('corretiva');
@@ -958,6 +1063,11 @@ const UI = {
     
     // Inicializa sincronização em tempo real
     await RealtimeSync.init();
+    
+    // Configura botão de sync manual
+    document.getElementById('btnSyncNow').addEventListener('click', () => {
+      RealtimeSync.forceSync();
+    });
   },
   
   setupEventListeners() {
@@ -971,11 +1081,11 @@ const UI = {
       Utils.showLoading();
       const newRows = await DataManager.processFiles(e.target.files, 'preventiva');
       appState.preventiva.data.push(...newRows); 
-      DataManager.save('preventiva'); 
+      DataManager.save('preventiva'); // Isso já dispara sincronização
       DataManager.applyFilters('preventiva');
       e.target.value = ''; 
       Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
+      Utils.showAlert(`${newRows.length} registro(s) importado(s) e sincronizado(s)!`);
     });
     document.getElementById('btnPrevCSV').addEventListener('click', () => DataManager.export('preventiva'));
     document.getElementById('btnPrevDeleteSel').addEventListener('click', () => DataManager.deleteSelected('preventiva'));
@@ -989,11 +1099,11 @@ const UI = {
       Utils.showLoading();
       const newRows = await DataManager.processFiles(e.target.files, 'manutencao');
       appState.manutencao.data.push(...newRows); 
-      DataManager.save('manutencao'); 
+      DataManager.save('manutencao');
       DataManager.applyFilters('manutencao');
       e.target.value = ''; 
       Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
+      Utils.showAlert(`${newRows.length} registro(s) importado(s) e sincronizado(s)!`);
     });
     document.getElementById('btnMPCSV').addEventListener('click', () => DataManager.export('manutencao'));
     document.getElementById('btnMpDeleteSel').addEventListener('click', () => DataManager.deleteSelected('manutencao'));
@@ -1007,11 +1117,11 @@ const UI = {
       Utils.showLoading();
       const newRows = await DataManager.processFiles(e.target.files, 'corretiva');
       appState.corretiva.data.push(...newRows); 
-      DataManager.save('corretiva'); 
+      DataManager.save('corretiva');
       DataManager.applyFilters('corretiva');
       e.target.value = ''; 
       Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
+      Utils.showAlert(`${newRows.length} registro(s) importado(s) e sincronizado(s)!`);
     });
     document.getElementById('btnMCCSV').addEventListener('click', () => DataManager.export('corretiva'));
     document.getElementById('btnMcDeleteSel').addEventListener('click', () => DataManager.deleteSelected('corretiva'));
@@ -1025,11 +1135,11 @@ const UI = {
       Utils.showLoading();
       const newRows = await DataManager.processFiles(e.target.files, 'reprogramada');
       appState.reprogramada.data.push(...newRows); 
-      DataManager.save('reprogramada'); 
+      DataManager.save('reprogramada');
       DataManager.applyFilters('reprogramada');
       e.target.value = ''; 
       Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
+      Utils.showAlert(`${newRows.length} registro(s) importado(s) e sincronizado(s)!`);
     });
     document.getElementById('btnMRCSV').addEventListener('click', () => DataManager.export('reprogramada'));
     document.getElementById('btnMrDeleteSel').addEventListener('click', () => DataManager.deleteSelected('reprogramada'));
