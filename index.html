@@ -468,7 +468,6 @@ const CLOUD_SYNC = {
     reprogramada: 'manutencao_reprogramada'
   },
   saveTimers: {},
-  listeners: {},
   firebaseConfig: {
     apiKey: "AIzaSyBNajHs7TM8YEcIneqVE5q2zRG__azrgeo",
     authDomain: "dashboard-samarco.firebaseapp.com",
@@ -499,27 +498,10 @@ const CLOUD_SYNC = {
         type,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        items: [],
-        count: 0,
-        source: 'dashboard-samarco-web',
-        schemaVersion: 'cloud-v2'
+        items: []
       }, { merge: true })
     );
     await Promise.all(ops);
-  },
-  normalizeCloudItems(data) {
-    if (!data) return [];
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data.items)) return data.items;
-    if (Array.isArray(data.rows)) return data.rows;
-    if (Array.isArray(data.records)) return data.records;
-    if (data.items && typeof data.items === 'object') {
-      const keys = Object.keys(data.items);
-      if (keys.every(k => /^\d+$/.test(k))) {
-        return keys.sort((a,b) => Number(a) - Number(b)).map(k => data.items[k]);
-      }
-    }
-    return [];
   },
   serializeRecord(record) {
     const out = { ...record };
@@ -539,7 +521,7 @@ const CLOUD_SYNC = {
       const snap = await this.db.collection(collection).doc('state').get();
       if (!snap.exists) return [];
       const data = snap.data() || {};
-      const items = this.normalizeCloudItems(data);
+      const items = Array.isArray(data.items) ? data.items : [];
       return items.map(item => this.deserializeRecord(item));
     } catch (error) {
       console.warn('Falha ao ler nuvem de', type, error);
@@ -549,51 +531,21 @@ const CLOUD_SYNC = {
   async syncType(type) {
     const cloudItems = await this.loadFromCloud(type);
     if (cloudItems === null) return;
-    if (cloudItems.length > 0) {
+    if (cloudItems.length > 0 || appState[type].data.length === 0) {
       appState[type].data = cloudItems;
       appState[type].filtered = [...cloudItems];
       localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(appState[type].data));
       if (window.UI && typeof UI.updateFilters === 'function') UI.updateFilters(type);
       if (window.DataManager && typeof DataManager.applyFilters === 'function') DataManager.applyFilters(type);
-      return;
-    }
-    if (appState[type].data.length > 0) {
+    } else if (appState[type].data.length > 0) {
       this.queueSave(type, 50);
     }
-  },
-  applyRemoteState(type, items) {
-    appState[type].data = items;
-    appState[type].filtered = [...items];
-    localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(appState[type].data));
-    if (window.UI && typeof UI.updateFilters === 'function') UI.updateFilters(type);
-    if (window.DataManager && typeof DataManager.applyFilters === 'function') DataManager.applyFilters(type);
   },
   async syncAll() {
     if (!this.enabled) return;
     for (const type of Object.keys(this.collectionMap)) {
       await this.syncType(type);
     }
-  },
-  subscribeType(type) {
-    if (!this.enabled || this.listeners[type]) return;
-    const collection = this.collectionMap[type];
-    this.listeners[type] = this.db.collection(collection).doc('state').onSnapshot((snap) => {
-      if (!snap.exists) return;
-      const data = snap.data() || {};
-      const items = this.normalizeCloudItems(data).map(item => this.deserializeRecord(item));
-      if (!Array.isArray(items)) return;
-      const localJson = JSON.stringify((appState[type]?.data || []).map(item => this.serializeRecord(item)));
-      const remoteJson = JSON.stringify(items.map(item => this.serializeRecord(item)));
-      if (localJson !== remoteJson) {
-        this.applyRemoteState(type, items);
-      }
-    }, (error) => {
-      console.warn('Falha no listener da nuvem de', type, error);
-    });
-  },
-  subscribeAll() {
-    if (!this.enabled) return;
-    Object.keys(this.collectionMap).forEach(type => this.subscribeType(type));
   },
   queueSave(type, delay = 700) {
     if (!this.enabled) return;
@@ -902,8 +854,6 @@ const UI = {
     DataManager.applyFilters('reprogramada');
     await CLOUD_SYNC.init();
     await CLOUD_SYNC.syncAll();
-    CLOUD_SYNC.subscribeAll();
-    window.addEventListener('focus', () => { CLOUD_SYNC.syncAll(); });
   },
   setupEventListeners() {
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -918,7 +868,6 @@ const UI = {
       appState.preventiva.data.push(...newRows); 
       DataManager.save('preventiva'); 
       DataManager.applyFilters('preventiva');
-      if (window.CLOUD_SYNC && CLOUD_SYNC.enabled) await CLOUD_SYNC.saveType('preventiva');
       e.target.value = ''; 
       Utils.hideLoading(); 
       Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
@@ -938,7 +887,6 @@ const UI = {
       appState.manutencao.data.push(...newRows); 
       DataManager.save('manutencao'); 
       DataManager.applyFilters('manutencao');
-      if (window.CLOUD_SYNC && CLOUD_SYNC.enabled) await CLOUD_SYNC.saveType('manutencao');
       e.target.value = ''; 
       Utils.hideLoading(); 
       Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
@@ -958,7 +906,6 @@ const UI = {
       appState.corretiva.data.push(...newRows); 
       DataManager.save('corretiva'); 
       DataManager.applyFilters('corretiva');
-      if (window.CLOUD_SYNC && CLOUD_SYNC.enabled) await CLOUD_SYNC.saveType('corretiva');
       e.target.value = ''; 
       Utils.hideLoading(); 
       Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
@@ -978,7 +925,6 @@ const UI = {
       appState.reprogramada.data.push(...newRows); 
       DataManager.save('reprogramada'); 
       DataManager.applyFilters('reprogramada');
-      if (window.CLOUD_SYNC && CLOUD_SYNC.enabled) await CLOUD_SYNC.saveType('reprogramada');
       e.target.value = ''; 
       Utils.hideLoading(); 
       Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
@@ -1574,246 +1520,6 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
 })();
 </script>
 <!-- === END: Export PNG Paginado === -->
-    <!-- SENSOR NAZA PORTAL - DASHBOARD SAMARCO (CORRIGIDO - COM SUPORTE A REALTIME) -->
-<script>
-(function() {
-    console.log('🔄 Iniciando sensor do Dashboard Samarco...');
-    
-    const SISTEMA_ID = 'producao';
-    const MAX_TENTATIVAS = 30;
-    let tentativas = 0;
-    let usandoFirestore = false;
-    
-    const firebaseConfig = {
-        apiKey: "AIzaSyDneReMjO78JqJ-LvmSTiQqUMkxT97H6JE",
-        authDomain: "naza-auditoria-hub.firebaseapp.com",
-        databaseURL: "https://naza-auditoria-hub-default-rtdb.firebaseio.com",
-        projectId: "naza-auditoria-hub",
-    };
-    
-    // Função para carregar script dinamicamente
-    function carregarScriptRealtime() {
-        return new Promise((resolve, reject) => {
-            // Verifica se já está carregado
-            if (typeof firebase !== 'undefined' && firebase.database) {
-                resolve();
-                return;
-            }
-            
-            console.log('📦 Carregando Firebase Realtime Database...');
-            const script = document.createElement('script');
-            script.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js';
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-        });
-    }
-    
-    function extrairNumeroElemento(id) {
-        const el = document.getElementById(id);
-        if (!el) return 0;
-        const texto = el.textContent || '';
-        const match = texto.match(/\d+/);
-        return match ? parseInt(match[0]) : 0;
-    }
-    
-    function extrairPercentualElemento(id) {
-        const el = document.getElementById(id);
-        if (!el) return 0;
-        const texto = el.textContent || '';
-        const match = texto.match(/(\d+)%/);
-        return match ? parseInt(match[1]) : 0;
-    }
-    
-    function coletarDadosReais() {
-        try {
-            let abaAtiva = 'preventiva';
-            const tabs = document.querySelectorAll('.tab-btn');
-            for (const tab of tabs) {
-                if (tab.classList.contains('active')) {
-                    if (tab.dataset.tab) abaAtiva = tab.dataset.tab;
-                    break;
-                }
-            }
-            
-            let K = 'Prev';
-            if (abaAtiva === 'manutencao') K = 'Mp';
-            else if (abaAtiva === 'corretiva') K = 'Mc';
-            else if (abaAtiva === 'reprogramada') K = 'Mr';
-            
-            const total = extrairNumeroElemento('kpi' + K + 'Count');
-            const areas = extrairNumeroElemento('kpi' + K + 'Areas');
-            const tags = extrairNumeroElemento('kpi' + K + 'Tags');
-            const percentual = extrairPercentualElemento('kpi' + K + 'Rate');
-            const realizados = extrairNumeroElemento('kpi' + K + 'Done');
-            
-            let pendentes = 0;
-            let naoRealizados = 0;
-            
-            if (abaAtiva === 'reprogramada') {
-                pendentes = extrairNumeroElemento('kpi' + K + 'Pending');
-                naoRealizados = extrairNumeroElemento('kpi' + K + 'Reprogramado');
-            } else {
-                pendentes = extrairNumeroElemento('kpi' + K + 'Pending');
-                naoRealizados = extrairNumeroElemento('kpi' + K + 'NotDone');
-            }
-            
-            return {
-                totalRegistros: total || 0,
-                areasDistintas: areas || 0,
-                tagsDistintas: tags || 0,
-                percentualRealizado: percentual || 0,
-                realizados: realizados || 0,
-                pendentes: pendentes || 0,
-                naoRealizados: naoRealizados || 0,
-                abaAtiva: abaAtiva
-            };
-            
-        } catch (e) {
-            console.warn('Erro ao coletar dados:', e);
-            return {
-                totalRegistros: 0,
-                areasDistintas: 0,
-                tagsDistintas: 0,
-                percentualRealizado: 0,
-                realizados: 0,
-                pendentes: 0,
-                naoRealizados: 0,
-                abaAtiva: 'preventiva'
-            };
-        }
-    }
-    
-    async function tentarIniciarSensor() {
-        tentativas++;
-        
-        if (typeof firebase === 'undefined') {
-            if (tentativas < MAX_TENTATIVAS) {
-                console.log(`⏳ Aguardando Firebase... (${tentativas}/${MAX_TENTATIVAS})`);
-                setTimeout(tentarIniciarSensor, 1000);
-                return;
-            } else {
-                console.log('⚠️ Firebase não disponível - operando em modo local');
-                setInterval(() => {
-                    const dados = coletarDadosReais();
-                    console.log('📊 Dados locais:', {
-                        total: dados.totalRegistros,
-                        realizadas: dados.realizados,
-                        percentual: dados.percentualRealizado + '%'
-                    });
-                }, 30000);
-                return;
-            }
-        }
-        
-        try {
-            // Inicializa app Firebase se necessário
-            let app;
-            if (!firebase.apps.length) {
-                app = firebase.initializeApp(firebaseConfig);
-            } else {
-                app = firebase.app();
-            }
-            
-            // Tenta usar Realtime Database primeiro
-            let db;
-            try {
-                if (firebase.database) {
-                    db = firebase.database();
-                    console.log('✅ Realtime Database conectado');
-                    usandoFirestore = false;
-                } else {
-                    // Se não tiver database, tenta carregar o script
-                    await carregarScriptRealtime();
-                    db = firebase.database();
-                    console.log('✅ Realtime Database carregado e conectado');
-                    usandoFirestore = false;
-                }
-            } catch (e) {
-                console.warn('⚠️ Realtime Database não disponível, usando Firestore como fallback');
-                // Fallback para Firestore
-                db = firebase.firestore();
-                usandoFirestore = true;
-            }
-            
-            function enviarDados() {
-                const dados = coletarDadosReais();
-                
-                if (dados.totalRegistros === 0 && dados.realizados === 0) {
-                    console.log('⏳ Nenhum dado encontrado. Aguardando importação...');
-                    return;
-                }
-                
-                const payload = {
-                    sistema: SISTEMA_ID,
-                    valores: [
-                        dados.percentualRealizado || 0,
-                        dados.totalRegistros || 0,
-                        dados.pendentes || 0
-                    ],
-                    dadosCompletos: {
-                        total: dados.totalRegistros,
-                        realizadas: dados.realizados,
-                        pendentes: dados.pendentes,
-                        naoRealizados: dados.naoRealizados,
-                        areasDistintas: dados.areasDistintas,
-                        tagsDistintas: dados.tagsDistintas,
-                        percentual: dados.percentualRealizado,
-                        abaAtiva: dados.abaAtiva,
-                        timestamp: Date.now(),
-                        dataHora: new Date().toLocaleString('pt-BR')
-                    },
-                    timestamp: Date.now()
-                };
-                
-                if (usandoFirestore) {
-                    // Usa Firestore
-                    db.collection('sensores').doc(SISTEMA_ID).set(payload)
-                        .then(() => {
-                            console.log('🟢 [Firestore] Dados enviados:', {
-                                total: dados.totalRegistros,
-                                realizadas: dados.realizados,
-                                percentual: dados.percentualRealizado + '%'
-                            });
-                        })
-                        .catch(err => console.error('❌ Erro no Firestore:', err));
-                } else {
-                    // Usa Realtime Database
-                    db.ref('sensores/' + SISTEMA_ID).set(payload)
-                        .then(() => {
-                            console.log('🟢 [Realtime] Dados enviados:', {
-                                total: dados.totalRegistros,
-                                realizadas: dados.realizados,
-                                percentual: dados.percentualRealizado + '%',
-                                aba: dados.abaAtiva
-                            });
-                        })
-                        .catch(err => console.error('❌ Erro no Realtime:', err));
-                }
-            }
-            
-            // Primeiro envio após 3 segundos
-            setTimeout(enviarDados, 3000);
-            // Depois a cada 30 segundos
-            setInterval(enviarDados, 30000);
-            
-            console.log(`✅ Sensor Produção operacional! (usando ${usandoFirestore ? 'Firestore' : 'Realtime Database'})`);
-            
-        } catch (e) {
-            console.error('❌ Erro crítico no sensor:', e);
-            // Tenta novamente em 5 segundos
-            setTimeout(tentarIniciarSensor, 5000);
-        }
-    }
-    
-    // Inicia o processo
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => setTimeout(tentarIniciarSensor, 1500));
-    } else {
-        setTimeout(tentarIniciarSensor, 1500);
-    }
-})();
-</script>
-</script>
+
 </body>
 </html>
