@@ -462,31 +462,63 @@ const FIREBASE_CONFIG = {
   authDomain: "naza-auditoria-hub.firebaseapp.com",
   databaseURL: "https://naza-auditoria-hub-default-rtdb.firebaseio.com",
   projectId: "naza-auditoria-hub",
-  storageBucket: "naza-auditoria-hub.firebasestorage.app",
+  storageBucket: "naza-auditoria-hub.appspot.com",  // ✅ CORRIGIDO
   messagingSenderId: "61590124044",
   appId: "1:61590124044:web:4a29cc3cf74dc5bb426029"
 };
 
-// Inicializa Firebase uma única vez
+// Inicializa Firebase com tratamento de erros melhorado
 let firebaseApp = null;
 let firebaseDB = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT = 5;
 
 function initFirebase() {
-  try {
-    if (!firebase.apps.length) {
-      firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
-    } else {
-      firebaseApp = firebase.app();
+  return new Promise((resolve) => {
+    try {
+      if (!firebase.apps.length) {
+        firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+      } else {
+        firebaseApp = firebase.app();
+      }
+      
+      firebaseDB = firebase.database();
+      
+      // Testa a conexão explicitamente
+      const connectedRef = firebaseDB.ref('.info/connected');
+      connectedRef.on('value', (snap) => {
+        if (snap.val() === true) {
+          console.log('✅ Firebase Realtime Database conectado com sucesso');
+          updateConnectionStatus(true);
+          reconnectAttempts = 0; // Reset contador
+          resolve(true);
+        } else {
+          console.warn('⚠️ Firebase desconectado, tentando reconectar...');
+          updateConnectionStatus(false);
+          
+          // Tenta reconectar automaticamente
+          if (reconnectAttempts < MAX_RECONNECT) {
+            reconnectAttempts++;
+            setTimeout(() => {
+              console.log(`🔄 Tentativa de reconexão ${reconnectAttempts}/${MAX_RECONNECT}`);
+              initFirebase();
+            }, 2000 * reconnectAttempts);
+          }
+        }
+      }, (error) => {
+        console.error('❌ Erro no monitor de conexão:', error);
+        updateConnectionStatus(false);
+        resolve(false);
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Erro ao inicializar Firebase:', error);
+      updateConnectionStatus(false);
+      resolve(false);
+      return false;
     }
-    firebaseDB = firebase.database();
-    console.log('✅ Firebase Realtime Database conectado com sucesso');
-    updateConnectionStatus(true);
-    return true;
-  } catch (error) {
-    console.error('❌ Erro ao inicializar Firebase:', error);
-    updateConnectionStatus(false);
-    return false;
-  }
+  });
 }
 
 function updateConnectionStatus(online) {
@@ -555,12 +587,14 @@ const RealtimeSync = {
   saveTimers: {},
   
   init() {
-    this.enabled = initFirebase();
-    if (this.enabled) {
-      this.setupPresence();
-      this.subscribeAll();
-    }
-    return this.enabled;
+    return initFirebase().then((success) => {
+      this.enabled = success;
+      if (this.enabled) {
+        this.setupPresence();
+        this.subscribeAll();
+      }
+      return this.enabled;
+    });
   },
   
   setupPresence() {
@@ -1623,6 +1657,119 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
     if (bMc)   bMc.onclick   = () => exportDashboardPNG('corretiva');
     if (bMr)   bMr.onclick   = () => exportDashboardPNG('reprogramada');
   });
+})();
+</script>
+
+<!-- SENSOR NAZA PORTAL - COLETA DE DADOS DO DASHBOARD -->
+<script>
+(function() {
+    console.log('🔄 Iniciando sensor de coleta do Dashboard Samarco...');
+    
+    const SISTEMA_ID = 'producao';
+    const COLECAO = 'sensores';
+    
+    function extrairNumeroElemento(id) {
+        const el = document.getElementById(id);
+        if (!el) return 0;
+        const texto = el.textContent || '';
+        const match = texto.match(/\d+/);
+        return match ? parseInt(match[0]) : 0;
+    }
+    
+    function extrairPercentualElemento(id) {
+        const el = document.getElementById(id);
+        if (!el) return 0;
+        const texto = el.textContent || '';
+        const match = texto.match(/(\d+)%/);
+        return match ? parseInt(match[1]) : 0;
+    }
+    
+    function coletarDadosReais() {
+        try {
+            let abaAtiva = 'preventiva';
+            const tabs = document.querySelectorAll('.tab-btn');
+            for (const tab of tabs) {
+                if (tab.classList.contains('active')) {
+                    if (tab.dataset.tab) abaAtiva = tab.dataset.tab;
+                    break;
+                }
+            }
+            
+            let K = 'Prev';
+            if (abaAtiva === 'manutencao') K = 'Mp';
+            else if (abaAtiva === 'corretiva') K = 'Mc';
+            else if (abaAtiva === 'reprogramada') K = 'Mr';
+            
+            const total = extrairNumeroElemento('kpi' + K + 'Count');
+            const realizados = extrairNumeroElemento('kpi' + K + 'Done');
+            const pendentes = extrairNumeroElemento('kpi' + K + 'Pending');
+            const percentual = extrairPercentualElemento('kpi' + K + 'Rate');
+            
+            return {
+                totalRegistros: total || 0,
+                realizados: realizados || 0,
+                pendentes: pendentes || 0,
+                percentualRealizado: percentual || 0,
+                abaAtiva: abaAtiva,
+                timestamp: Date.now(),
+                dataHora: new Date().toLocaleString('pt-BR')
+            };
+        } catch (e) {
+            console.warn('Erro ao coletar dados:', e);
+            return null;
+        }
+    }
+    
+    function enviarDadosParaRealtime() {
+        if (!window.firebaseDB) {
+            console.warn('⏳ Firebase não inicializado, aguardando...');
+            return;
+        }
+        
+        const dados = coletarDadosReais();
+        if (!dados || dados.totalRegistros === 0) {
+            console.log('⏳ Nenhum dado para enviar');
+            return;
+        }
+        
+        const payload = {
+            sistema: SISTEMA_ID,
+            valores: [
+                dados.percentualRealizado,
+                dados.totalRegistros,
+                dados.pendentes
+            ],
+            dadosCompletos: dados,
+            lastUpdate: Date.now()
+        };
+        
+        firebaseDB.ref(COLECAO + '/' + SISTEMA_ID).set(payload)
+            .then(() => {
+                console.log('🟢 [SENSOR] Dados enviados:', {
+                    total: dados.totalRegistros,
+                    realizados: dados.realizados,
+                    percentual: dados.percentualRealizado + '%'
+                });
+            })
+            .catch(err => {
+                console.error('❌ [SENSOR] Erro ao enviar:', err);
+            });
+    }
+    
+    // Inicia o sensor quando o Firebase estiver pronto
+    function iniciarSensor() {
+        if (window.firebaseDB) {
+            console.log('✅ Sensor iniciado - enviando dados a cada 30s');
+            enviarDadosParaRealtime(); // Primeiro envio imediato
+            setInterval(enviarDadosParaRealtime, 30000); // A cada 30s
+        } else {
+            console.log('⏳ Aguardando Firebase para iniciar sensor...');
+            setTimeout(iniciarSensor, 2000);
+        }
+    }
+    
+    // Verifica a cada 2s se o Firebase já inicializou
+    setTimeout(iniciarSensor, 3000);
 })();
 </script>
 </body>
