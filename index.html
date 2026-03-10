@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dashboard Samarco — Cloud Firestore</title>
+  <title>Dashboard Samarco — Realtime Database</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -427,22 +427,23 @@
 
 <!-- Firebase App -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<!-- Firebase Firestore -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!-- Firebase Realtime Database -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
 <script>
-// ==================== CONFIGURAÇÃO FIRESTORE ====================
+// ==================== CONFIGURAÇÃO REALTIME DATABASE ====================
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBNajHs7TM8YEcIneqVE5q2zRG__azrgeo",
-  authDomain: "dashboard-samarco.firebaseapp.com",
-  projectId: "dashboard-samarco",
-  storageBucket: "dashboard-samarco.firebasestorage.app",
+  apiKey: "AIzaSyDneReMjO78JqJ-LvmSTiQqUMkxT97H6JE",
+  authDomain: "naza-auditoria-hub.firebaseapp.com",
+  databaseURL: "https://naza-auditoria-hub-default-rtdb.firebaseio.com",
+  projectId: "naza-auditoria-hub",
+  storageBucket: "naza-auditoria-hub.firebasestorage.app",
   messagingSenderId: "61590124044",
   appId: "1:61590124044:web:4a29cc3cf74dc5bb426029"
 };
 
 let firebaseApp = null;
-let firestoreDB = null;
+let firebaseDB = null;
 let lastSyncTime = null;
 
 function initFirebase() {
@@ -452,8 +453,8 @@ function initFirebase() {
     } else {
       firebaseApp = firebase.app();
     }
-    firestoreDB = firebase.firestore();
-    console.log('✅ Cloud Firestore conectado com sucesso');
+    firebaseDB = firebase.database();
+    console.log('✅ Firebase Realtime Database conectado');
     updateConnectionStatus(true);
     return true;
   } catch (error) {
@@ -486,6 +487,35 @@ function updateConnectionStatus(online, syncing = false) {
   }
 }
 
+// ==================== SANITIZADOR DE CHAVES ====================
+const Sanitizer = {
+  // Caracteres inválidos no Realtime DB: . # $ / [ ]
+  invalidChars: /[.#$\[\]]/g,
+  
+  sanitizeKey(key) {
+    if (typeof key !== 'string') return String(key);
+    // Substitui caracteres inválidos por _
+    return key.replace(this.invalidChars, '_');
+  },
+  
+  sanitizeObject(obj) {
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj !== 'object') return obj;
+    if (obj instanceof Date) return obj.toISOString();
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.sanitizeObject(item));
+    }
+    
+    const sanitized = {};
+    for (const [key, value] of Object.entries(obj)) {
+      const safeKey = this.sanitizeKey(key);
+      sanitized[safeKey] = this.sanitizeObject(value);
+    }
+    return sanitized;
+  }
+};
+
 // ==================== CONFIGURAÇÃO ====================
 const CONFIG = {
   STORAGE_KEYS: {
@@ -504,8 +534,8 @@ const CONFIG = {
     OM: ['OM', 'Nº OM', 'ORDEM', 'ORDEM DE MANUTENÇÃO', 'ORDEM MANUTENÇÃO', 'N° OM'],
     MES: ['MÊS', 'MES', 'Mês', 'Mes'],
     DIA: ['DIA', 'Dia'],
-    DURACAO: ['DURAÇÃO', 'DURACAO', 'Duração', 'DURAÇÃO/ H', 'DURACAO/H'],
-    RESPONSAVEL: ['RESPONSÁVEL', 'RESPONSAVEL', 'Responsável', 'TURNO-RESP.', 'TURNO RESP'],
+    DURACAO: ['DURAÇÃO', 'DURACAO', 'Duração', 'DURAÇÃO/ H', 'DURACAO/H', 'DURAÇÃO_H', 'DURACAO_H'],
+    RESPONSAVEL: ['RESPONSÁVEL', 'RESPONSAVEL', 'Responsável', 'TURNO-RESP.', 'TURNO RESP', 'TURNO_RESP', 'TURNO_RESPONSAVEL'],
     OBSERVACAO: ['OBSERVAÇÃO', 'OBSERVACAO', 'Observação', 'OBS']
   },
   COLORS: {
@@ -531,60 +561,36 @@ let appState = {
   currentTab: 'preventiva'
 };
 
-// ==================== SANITIZADOR DE CHAVES FIRESTORE ====================
-const KeySanitizer = {
-  // Caracteres inválidos no Firestore: . # $ / [ ]
-  invalidChars: /[.#$\/\[\]]/g,
-  
-  sanitize(obj) {
-    if (obj === null || obj === undefined) return obj;
-    if (typeof obj !== 'object') return obj;
-    if (obj instanceof Date) return obj.toISOString();
-    
-    if (Array.isArray(obj)) {
-      return obj.map(item => this.sanitize(item));
-    }
-    
-    const sanitized = {};
-    for (const [key, value] of Object.entries(obj)) {
-      // Substitui caracteres inválidos por _
-      const safeKey = key.replace(this.invalidChars, '_');
-      sanitized[safeKey] = this.sanitize(value);
-    }
-    return sanitized;
-  },
-  
-  // Converte objeto para formato seguro do Firestore
-  toFirestoreSafe(obj) {
-    const sanitized = this.sanitize(obj);
-    // Garante que não há campos undefined
-    return JSON.parse(JSON.stringify(sanitized));
-  }
-};
-
-// ==================== SINCRONIZAÇÃO FIRESTORE ====================
+// ==================== SINCRONIZAÇÃO ====================
 const CloudSync = {
   enabled: false,
   listeners: {},
-  saveQueue: [],
-  isSaving: false,
   
   init() {
     this.enabled = initFirebase();
     if (this.enabled) {
+      this.setupPresence();
       this.subscribeAll();
     }
     return this.enabled;
   },
   
-  getCollection(type) {
-    const map = {
-      preventiva: 'preventiva',
-      manutencao: 'manutencao_programada',
-      corretiva: 'manutencao_corretiva',
-      reprogramada: 'manutencao_reprogramada'
-    };
-    return firestoreDB.collection(map[type]).doc('state');
+  setupPresence() {
+    const connectedRef = firebaseDB.ref('.info/connected');
+    connectedRef.on('value', (snap) => {
+      if (snap.val() === true) {
+        updateConnectionStatus(true);
+        console.log('🟢 Conectado');
+        this.syncAllTypes();
+      } else {
+        updateConnectionStatus(false);
+        console.log('🔴 Desconectado');
+      }
+    });
+  },
+  
+  getRef(type) {
+    return firebaseDB.ref('dashboard_samarco/' + type);
   },
   
   subscribeAll() {
@@ -597,24 +603,20 @@ const CloudSync = {
   subscribeType(type) {
     if (!this.enabled || this.listeners[type]) return;
     
-    const doc = this.getCollection(type);
-    this.listeners[type] = doc.onSnapshot((snapshot) => {
-      if (!snapshot.exists) return;
-      
-      const data = snapshot.data();
+    const ref = this.getRef(type);
+    this.listeners[type] = ref.on('value', (snapshot) => {
+      const data = snapshot.val();
       if (data && data.items) {
         const remoteTimestamp = data.lastUpdate || 0;
         const localTimestamp = this.getLocalTimestamp(type);
         
         if (remoteTimestamp > localTimestamp) {
-          console.log(`📥 Dados remotos mais recentes para ${type}`);
+          console.log(`📥 Dados remotos para ${type}`);
           this.applyRemoteData(type, data.items, remoteTimestamp);
         }
       }
-      updateConnectionStatus(true);
     }, (error) => {
-      console.error(`Erro ao sincronizar ${type}:`, error);
-      updateConnectionStatus(false);
+      console.error(`Erro em ${type}:`, error);
     });
   },
   
@@ -640,36 +642,33 @@ const CloudSync = {
     }
     
     localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(appState[type].data));
-    console.log(`✅ ${type} atualizado do servidor`);
   },
   
   async saveTypeImmediate(type) {
-    if (!this.enabled || !firestoreDB) {
-      console.warn(`⚠️ Firestore não disponível para ${type}`);
+    if (!this.enabled || !firebaseDB) {
+      console.warn(`⚠️ Firebase indisponível`);
       return false;
     }
     
     updateConnectionStatus(true, true);
     
     try {
-      // Sanitiza os dados antes de enviar
-      const items = appState[type].data.map(item => {
-        const sanitized = KeySanitizer.toFirestoreSafe({
-          ...item,
-          DATA: item.DATA ? item.DATA.toISOString() : null,
-          _timestamp: Date.now()
-        });
-        return sanitized;
-      });
+      // SANITIZA TODOS OS DADOS ANTES DE ENVIAR
+      const rawItems = appState[type].data.map(item => ({
+        ...item,
+        DATA: item.DATA ? item.DATA.toISOString() : null,
+        _timestamp: Date.now()
+      }));
       
-      const doc = this.getCollection(type);
-      await doc.set({
+      // Aplica sanitização em TODOS os objetos e chaves
+      const items = Sanitizer.sanitizeObject(rawItems);
+      
+      const ref = this.getRef(type);
+      await ref.set({
         items: items,
         count: items.length,
         lastUpdate: Date.now(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        source: 'dashboard-samarco-web',
-        schemaVersion: 'cloud-v2'
+        source: 'dashboard-samarco-web'
       });
       
       lastSyncTime = new Date();
@@ -677,31 +676,9 @@ const CloudSync = {
       console.log(`✅ ${type} sincronizado`);
       return true;
     } catch (error) {
-      console.error(`❌ Erro ao sincronizar ${type}:`, error);
+      console.error(`❌ Erro em ${type}:`, error);
       updateConnectionStatus(false);
       return false;
-    }
-  },
-  
-  queueSave(type) {
-    if (!this.saveQueue.includes(type)) {
-      this.saveQueue.push(type);
-    }
-    this.processSaveQueue();
-  },
-  
-  async processSaveQueue() {
-    if (this.isSaving || this.saveQueue.length === 0) return;
-    
-    this.isSaving = true;
-    const type = this.saveQueue.shift();
-    
-    await this.saveTypeImmediate(type);
-    
-    this.isSaving = false;
-    
-    if (this.saveQueue.length > 0) {
-      setTimeout(() => this.processSaveQueue(), 100);
     }
   },
   
@@ -714,7 +691,7 @@ const CloudSync = {
   async forceSync() {
     console.log('🔄 Sincronização manual');
     await this.syncAllTypes();
-    alert('Sincronização concluída!');
+    alert('Sincronizado!');
   }
 };
 
@@ -781,7 +758,7 @@ const Utils = {
   },
   unique(arr) { return [...new Set(arr.filter(Boolean))]; },
   downloadCSV(filename, rows) {
-    if (!rows.length) { Utils.showAlert("Nenhum dado para exportar"); return; }
+    if (!rows.length) { Utils.showAlert("Nenhum dado"); return; }
     const headers = Utils.unique(rows.flatMap(r => Object.keys(r)));
     const escape = s => (/[";,\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s);
     const lines = [headers.join(',')];
@@ -809,7 +786,7 @@ const DataManager = {
         allRows.push(...enriched);
       } catch(err) { 
         console.error(err); 
-        Utils.showAlert('Erro no arquivo ' + file.name + ': ' + err.message); 
+        Utils.showAlert('Erro em ' + file.name + ': ' + err.message); 
       }
     }
     return allRows;
@@ -830,12 +807,14 @@ const DataManager = {
       const hits = wanted.filter(w => row.includes(Utils.norm(w))).length;
       if (hits >= 3) { headerRow = i; break; }
     }
+    
     let headers = arrayOfArrays[headerRow].map(h => typeof h === 'string' ? h : String(h));
     headers = headers.map((h, i) => h && String(h).trim() ? String(h).trim() : ('COL_' + (i + 1)));
     
-    // Sanitiza headers para evitar caracteres inválidos
-    headers = headers.map(h => h.replace(/[.#$\/\[\]]/g, '_'));
+    // SANITIZA TODOS OS HEADERS PARA REMOVER CARACTERES INVÁLIDOS
+    headers = headers.map(h => Sanitizer.sanitizeKey(h));
     
+    // Remove duplicatas
     const seen = {}; 
     headers = headers.map(h => {
       let key = h;
@@ -848,8 +827,13 @@ const DataManager = {
     for (let r = headerRow + 1; r < arrayOfArrays.length; r++) {
       const line = arrayOfArrays[r]; 
       if (!line || line.every(v => String(v).trim() === '')) continue;
+      
       const obj = {}; 
-      for (let c = 0; c < headers.length; c++) { obj[headers[c]] = line[c] ?? ''; }
+      for (let c = 0; c < headers.length; c++) { 
+        obj[headers[c]] = line[c] ?? ''; 
+      }
+      
+      // Extrai campos padronizados
       const dataValue = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.DATA);
       obj.DATA = Utils.toDate(dataValue);
       obj.AREA = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.AREA);
@@ -865,7 +849,10 @@ const DataManager = {
       obj.OBSERVACAO = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.OBSERVACAO);
       obj._id = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
       obj._timestamp = Date.now();
-      data.push(obj);
+      
+      // SANITIZA O OBJETO ANTES DE ADICIONAR
+      const sanitizedObj = Sanitizer.sanitizeObject(obj);
+      data.push(sanitizedObj);
     }
     return data;
   },
@@ -873,7 +860,7 @@ const DataManager = {
   save(type) { 
     const key = CONFIG.STORAGE_KEYS[type.toUpperCase()]; 
     localStorage.setItem(key, JSON.stringify(appState[type].data)); 
-    CloudSync.queueSave(type);
+    CloudSync.saveTypeImmediate(type);
   },
   
   load(type) {
@@ -882,7 +869,7 @@ const DataManager = {
       const data = JSON.parse(localStorage.getItem(key) || '[]');
       appState[type].data = data.map(r => ({...r, DATA: r.DATA ? new Date(r.DATA) : null }));
       appState[type].filtered = [...appState[type].data];
-      if (window.UI && typeof UI.updateFilters === 'function') UI.updateFilters(type);
+      if (window.UI) UI.updateFilters(type);
     } catch { 
       appState[type].data = []; 
       appState[type].filtered = []; 
@@ -893,7 +880,7 @@ const DataManager = {
     const payload = {
       preventiva: appState.preventiva.data,
       manutencao: appState.manutencao.data,
-      corretiva:  appState.corretiva.data,
+      corretiva: appState.corretiva.data,
       reprogramada: appState.reprogramada.data,
       timestamp: new Date().toISOString(),
       version: '4.0'
@@ -911,18 +898,10 @@ const DataManager = {
     try {
       const text = await file.text(); 
       const data = JSON.parse(text);
-      if (Array.isArray(data.preventiva)) {
-        appState.preventiva.data = data.preventiva.map(r => ({...r, _timestamp: Date.now()}));
-      }
-      if (Array.isArray(data.manutencao)) {
-        appState.manutencao.data = data.manutencao.map(r => ({...r, _timestamp: Date.now()}));
-      }
-      if (Array.isArray(data.corretiva)) {
-        appState.corretiva.data = data.corretiva.map(r => ({...r, _timestamp: Date.now()}));
-      }
-      if (Array.isArray(data.reprogramada)) {
-        appState.reprogramada.data = data.reprogramada.map(r => ({...r, _timestamp: Date.now()}));
-      }
+      if (Array.isArray(data.preventiva)) appState.preventiva.data = data.preventiva.map(r => ({...r, _timestamp: Date.now()}));
+      if (Array.isArray(data.manutencao)) appState.manutencao.data = data.manutencao.map(r => ({...r, _timestamp: Date.now()}));
+      if (Array.isArray(data.corretiva)) appState.corretiva.data = data.corretiva.map(r => ({...r, _timestamp: Date.now()}));
+      if (Array.isArray(data.reprogramada)) appState.reprogramada.data = data.reprogramada.map(r => ({...r, _timestamp: Date.now()}));
       
       this.save('preventiva'); 
       this.save('manutencao'); 
@@ -934,39 +913,27 @@ const DataManager = {
       this.applyFilters('corretiva');
       this.applyFilters('reprogramada');
       
-      await CloudSync.syncAllTypes();
-      
-      Utils.showAlert('Backup restaurado e sincronizado!');
+      Utils.showAlert('Restaurado e sincronizado!');
     } catch(e) { 
-      Utils.showAlert('Erro ao restaurar: ' + e.message); 
+      Utils.showAlert('Erro: ' + e.message); 
     }
   },
   
   applyFilters(type) {
     const prefix = type === 'preventiva' ? 'prev' : (type === 'manutencao' ? 'mp' : (type === 'corretiva' ? 'mc' : 'mr'));
     const dateStart = document.getElementById(prefix + 'DateStart').value;
-    const dateEnd   = document.getElementById(prefix + 'DateEnd').value;
-    const area      = document.getElementById(prefix + 'Area').value;
-    const tag       = document.getElementById(prefix + 'Tag').value;
-    const situacao  = document.getElementById(prefix + 'Situacao').value;
+    const dateEnd = document.getElementById(prefix + 'DateEnd').value;
+    const area = document.getElementById(prefix + 'Area').value;
+    const tag = document.getElementById(prefix + 'Tag').value;
+    const situacao = document.getElementById(prefix + 'Situacao').value;
+    
     let filtered = [...appState[type].data];
-    if (dateStart) { 
-      const s = new Date(dateStart); 
-      filtered = filtered.filter(r => r.DATA && r.DATA >= s); 
-    }
-    if (dateEnd) { 
-      const e = new Date(dateEnd); 
-      filtered = filtered.filter(r => r.DATA && r.DATA <= e); 
-    }
-    if (area) { 
-      filtered = filtered.filter(r => r.AREA === area); 
-    }
-    if (tag) { 
-      filtered = filtered.filter(r => r.TAG === tag); 
-    }
-    if (situacao) { 
-      filtered = filtered.filter(r => r.SITUACAO === Utils.norm(situacao)); 
-    }
+    if (dateStart) filtered = filtered.filter(r => r.DATA && r.DATA >= new Date(dateStart));
+    if (dateEnd) filtered = filtered.filter(r => r.DATA && r.DATA <= new Date(dateEnd));
+    if (area) filtered = filtered.filter(r => r.AREA === area);
+    if (tag) filtered = filtered.filter(r => r.TAG === tag);
+    if (situacao) filtered = filtered.filter(r => r.SITUACAO === Utils.norm(situacao));
+    
     appState[type].filtered = filtered;
     UI.updateTable(type); 
     UI.updateKPIs(type); 
@@ -990,32 +957,24 @@ const DataManager = {
                    'reprogramadaBody';
     const body = document.getElementById(bodyId);
     const checks = body ? Array.from(body.querySelectorAll('.rowChk')).filter(c => c.checked) : [];
-    if (!checks.length) { 
-      Utils.showAlert('Selecione ao menos um registro.'); 
-      return; 
-    }
-    if (!confirm(`Excluir ${checks.length} registro(s)?`)) return;
+    if (!checks.length) { Utils.showAlert('Selecione um registro.'); return; }
+    if (!confirm(`Excluir ${checks.length}?`)) return;
     const toRemove = new Set(checks.map(c => c.dataset.id));
     appState[type].data = appState[type].data.filter(r => !toRemove.has(r._id));
     this.save(type); 
     this.applyFilters(type);
-    Utils.showAlert('Registros excluídos!');
   },
   
   deleteAll(type) {
-    if (!confirm('Excluir TODOS os registros?')) return;
+    if (!confirm('Excluir TODOS?')) return;
     appState[type].data = []; 
     this.save(type); 
     this.applyFilters(type);
-    Utils.showAlert('Todos excluídos!');
   },
   
   export(type) {
     const rows = appState[type].filtered;
-    if (!rows.length) { 
-      Utils.showAlert('Nenhum dado'); 
-      return; 
-    }
+    if (!rows.length) { Utils.showAlert('Nenhum dado'); return; }
     const filename = `${type}_${new Date().toISOString().split('T')[0]}.csv`;
     Utils.downloadCSV(filename, rows);
   }
@@ -1025,22 +984,16 @@ const DataManager = {
 const UI = {
   async init() {
     this.setupEventListeners();
-    
     DataManager.load('preventiva'); 
     DataManager.load('manutencao'); 
     DataManager.load('corretiva');
     DataManager.load('reprogramada');
-    
     DataManager.applyFilters('preventiva'); 
     DataManager.applyFilters('manutencao'); 
     DataManager.applyFilters('corretiva');
     DataManager.applyFilters('reprogramada');
-    
     await CloudSync.init();
-    
-    document.getElementById('btnSyncNow').addEventListener('click', () => {
-      CloudSync.forceSync();
-    });
+    document.getElementById('btnSyncNow').addEventListener('click', () => CloudSync.forceSync());
   },
   
   setupEventListeners() {
@@ -1058,7 +1011,7 @@ const UI = {
       DataManager.applyFilters('preventiva');
       e.target.value = ''; 
       Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) e sincronizado(s)!`);
+      Utils.showAlert(`${newRows.length} importado(s)!`);
     });
     document.getElementById('btnPrevCSV').addEventListener('click', () => DataManager.export('preventiva'));
     document.getElementById('btnPrevDeleteSel').addEventListener('click', () => DataManager.deleteSelected('preventiva'));
@@ -1076,7 +1029,7 @@ const UI = {
       DataManager.applyFilters('manutencao');
       e.target.value = ''; 
       Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) e sincronizado(s)!`);
+      Utils.showAlert(`${newRows.length} importado(s)!`);
     });
     document.getElementById('btnMPCSV').addEventListener('click', () => DataManager.export('manutencao'));
     document.getElementById('btnMpDeleteSel').addEventListener('click', () => DataManager.deleteSelected('manutencao'));
@@ -1094,7 +1047,7 @@ const UI = {
       DataManager.applyFilters('corretiva');
       e.target.value = ''; 
       Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) e sincronizado(s)!`);
+      Utils.showAlert(`${newRows.length} importado(s)!`);
     });
     document.getElementById('btnMCCSV').addEventListener('click', () => DataManager.export('corretiva'));
     document.getElementById('btnMcDeleteSel').addEventListener('click', () => DataManager.deleteSelected('corretiva'));
@@ -1112,7 +1065,7 @@ const UI = {
       DataManager.applyFilters('reprogramada');
       e.target.value = ''; 
       Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) e sincronizado(s)!`);
+      Utils.showAlert(`${newRows.length} importado(s)!`);
     });
     document.getElementById('btnMRCSV').addEventListener('click', () => DataManager.export('reprogramada'));
     document.getElementById('btnMrDeleteSel').addEventListener('click', () => DataManager.deleteSelected('reprogramada'));
@@ -1148,11 +1101,11 @@ const UI = {
 
     const currentArea = areaSel.value;
     const currentTag = tagSel.value;
-    const areas = [...new Set((appState[type].data || []).map(r => r.AREA).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR'));
-    const tags  = [...new Set((appState[type].data || []).map(r => r.TAG).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR'));
+    const areas = [...new Set((appState[type].data || []).map(r => r.AREA).filter(Boolean))].sort();
+    const tags = [...new Set((appState[type].data || []).map(r => r.TAG).filter(Boolean))].sort();
 
-    areaSel.innerHTML = '<option value="">Todas as áreas</option>' + areas.map(v => `<option value="${Utils.escapeHtml(String(v))}">${Utils.escapeHtml(String(v))}</option>`).join('');
-    tagSel.innerHTML  = '<option value="">Todas as tags</option>' + tags.map(v => `<option value="${Utils.escapeHtml(String(v))}">${Utils.escapeHtml(String(v))}</option>`).join('');
+    areaSel.innerHTML = '<option value="">Todas</option>' + areas.map(v => `<option value="${Utils.escapeHtml(String(v))}">${Utils.escapeHtml(String(v))}</option>`).join('');
+    tagSel.innerHTML = '<option value="">Todas</option>' + tags.map(v => `<option value="${Utils.escapeHtml(String(v))}">${Utils.escapeHtml(String(v))}</option>`).join('');
 
     if (areas.includes(currentArea)) areaSel.value = currentArea;
     if (tags.includes(currentTag)) tagSel.value = currentTag;
@@ -1170,6 +1123,7 @@ const UI = {
     const thead = document.getElementById(headId); 
     const tbody = document.getElementById(bodyId);
     const rows = appState[type].filtered;
+    
     if (!thead.children.length) {
       thead.innerHTML = `
         <th style="width: 40px;"><input type="checkbox" id="${type}CheckAll" class="form-check-input"></th>
@@ -1177,12 +1131,11 @@ const UI = {
       const checkAll = document.getElementById(type + 'CheckAll');
       if (checkAll) { 
         checkAll.addEventListener('change', (e) => {
-          document.querySelectorAll('#' + bodyId + ' .rowChk').forEach(ch => {
-            ch.checked = e.target.checked;
-          });
+          document.querySelectorAll('#' + bodyId + ' .rowChk').forEach(ch => ch.checked = e.target.checked);
         }); 
       }
     }
+    
     tbody.innerHTML = '';
     for (const row of rows) {
       const tr = document.createElement('tr');
@@ -1207,13 +1160,11 @@ const UI = {
   },
   
   updateKPIs(type) {
-    const K = type === 'preventiva' ? 'Prev' : 
-              (type === 'manutencao' ? 'Mp' : 
-              (type === 'corretiva' ? 'Mc' : 'Mr'));
+    const K = type === 'preventiva' ? 'Prev' : (type === 'manutencao' ? 'Mp' : (type === 'corretiva' ? 'Mc' : 'Mr'));
     const data = appState[type].filtered;
     const total = data.length;
     const areas = Utils.unique(data.map(r => r.AREA).filter(Boolean)).length;
-    const tags  = Utils.unique(data.map(r => r.TAG).filter(Boolean)).length;
+    const tags = Utils.unique(data.map(r => r.TAG).filter(Boolean)).length;
     
     if (type === 'reprogramada') {
       const reprogramados = data.filter(r => r.SITUACAO === 'REPROGRAMADO').length;
@@ -1245,9 +1196,7 @@ const UI = {
   },
   
   updateCharts(type) {
-    const prefix = type === 'preventiva' ? 'prev' : 
-                   (type === 'manutencao' ? 'mp' : 
-                   (type === 'corretiva' ? 'mc' : 'mr'));
+    const prefix = type === 'preventiva' ? 'prev' : (type === 'manutencao' ? 'mp' : (type === 'corretiva' ? 'mc' : 'mr'));
     const data = appState[type].filtered;
     this.updateByAreaChart(type, prefix, data);
     this.updateTimelineChart(type, prefix, data);
@@ -1269,22 +1218,8 @@ const UI = {
     const values = labels.map(l => areaCount[l]);
     appState[type].charts.byArea = new Chart(ctx, {
       type: 'bar', 
-      data: { 
-        labels, 
-        datasets: [{ 
-          label: 'Quantidade', 
-          data: values, 
-          backgroundColor: CONFIG.COLORS.brand, 
-          borderColor: CONFIG.COLORS.brand, 
-          borderWidth: 1 
-        }] 
-      },
-      options: { 
-        responsive: true, 
-        maintainAspectRatio: false, 
-        plugins: { legend: { display: false } }, 
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } 
-      }
+      data: { labels, datasets: [{ label: 'Quantidade', data: values, backgroundColor: CONFIG.COLORS.brand, borderColor: CONFIG.COLORS.brand, borderWidth: 1 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
     });
   },
   
@@ -1307,24 +1242,8 @@ const UI = {
     const values = labels.map(l => dateCount[l]);
     appState[type].charts.timeline = new Chart(ctx, {
       type: 'line',
-      data: { 
-        labels, 
-        datasets: [{ 
-          label: 'Atividades', 
-          data: values, 
-          backgroundColor: 'rgba(26, 160, 109, 0.2)', 
-          borderColor: CONFIG.COLORS.accent, 
-          borderWidth: 2, 
-          fill: true, 
-          tension: 0.4 
-        }] 
-      },
-      options: { 
-        responsive: true, 
-        maintainAspectRatio: false, 
-        plugins: { legend: { display: false } }, 
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } 
-      }
+      data: { labels, datasets: [{ label: 'Atividades', data: values, backgroundColor: 'rgba(26, 160, 109, 0.2)', borderColor: CONFIG.COLORS.accent, borderWidth: 2, fill: true, tension: 0.4 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
     });
   },
   
@@ -1338,71 +1257,20 @@ const UI = {
       const t = row.TAG || 'Sem Tag'; 
       tagCount[t] = (tagCount[t] || 0) + 1; 
     }
-    
     const sorted = Object.entries(tagCount).sort((a, b) => b[1] - a[1]);
     const labels = sorted.map(t => t[0]); 
     const values = sorted.map(t => t[1]);
     const total = values.reduce((s, v) => s + v, 0); 
     const cumulative = []; 
     let sum = 0; 
-    for(const v of values) { 
-      sum += v; 
-      cumulative.push((sum / total) * 100); 
-    }
+    for(const v of values) { sum += v; cumulative.push((sum / total) * 100); }
     appState[type].charts.pareto = new Chart(ctx, {
       type: 'bar',
-      data: { 
-        labels, 
-        datasets: [
-          { 
-            label: 'Quantidade', 
-            data: values, 
-            backgroundColor: CONFIG.COLORS.brand, 
-            borderColor: CONFIG.COLORS.brand, 
-            borderWidth: 1, 
-            yAxisID: 'y' 
-          },
-          { 
-            label: '% Acumulado', 
-            data: cumulative, 
-            type: 'line', 
-            borderColor: CONFIG.COLORS.danger, 
-            backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-            borderWidth: 2, 
-            fill: false, 
-            yAxisID: 'y1' 
-          }
-        ]
-      },
-      options: { 
-        responsive: true, 
-        maintainAspectRatio: false, 
-        plugins: { 
-          legend: { display: true, position: 'top' }
-        },
-        scales: { 
-          y: { 
-            type: 'linear', 
-            position: 'left', 
-            beginAtZero: true, 
-            ticks: { precision: 0 } 
-          },
-          y1: { 
-            type: 'linear', 
-            position: 'right', 
-            beginAtZero: true, 
-            max: 100, 
-            grid: { drawOnChartArea: false }, 
-            ticks: { callback: (v) => v + '%' } 
-          },
-          x: {
-            ticks: {
-              maxRotation: 45,
-              minRotation: 45
-            }
-          }
-        } 
-      }
+      data: { labels, datasets: [
+        { label: 'Quantidade', data: values, backgroundColor: CONFIG.COLORS.brand, borderColor: CONFIG.COLORS.brand, borderWidth: 1, yAxisID: 'y' },
+        { label: '% Acumulado', data: cumulative, type: 'line', borderColor: CONFIG.COLORS.danger, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderWidth: 2, fill: false, yAxisID: 'y1' }
+      ]},
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' } }, scales: { y: { type: 'linear', position: 'left', beginAtZero: true, ticks: { precision: 0 } }, y1: { type: 'linear', position: 'right', beginAtZero: true, max: 100, grid: { drawOnChartArea: false }, ticks: { callback: (v) => v + '%' } }, x: { ticks: { maxRotation: 45, minRotation: 45 } } } }
     });
   },
   
@@ -1416,45 +1284,19 @@ const UI = {
       const reprogramados = data.filter(r => r.SITUACAO === 'REPROGRAMADO').length;
       const realizados = data.filter(r => r.SITUACAO === 'REALIZADO').length;
       const pendentes = data.length - realizados - reprogramados;
-      
       appState[type].charts.status = new Chart(ctx, {
         type: 'doughnut',
-        data: { 
-          labels: ['Realizado', 'Reprogramado', 'Pendente'], 
-          datasets: [{ 
-            data: [realizados, reprogramados, pendentes], 
-            backgroundColor: [CONFIG.COLORS.success, CONFIG.COLORS.reprogramado, CONFIG.COLORS.warning], 
-            borderWidth: 2, 
-            borderColor: '#fff' 
-          }] 
-        },
-        options: { 
-          responsive: true, 
-          maintainAspectRatio: false, 
-          plugins: { legend: { display: true, position: 'bottom' } } 
-        }
+        data: { labels: ['Realizado', 'Reprogramado', 'Pendente'], datasets: [{ data: [realizados, reprogramados, pendentes], backgroundColor: [CONFIG.COLORS.success, CONFIG.COLORS.reprogramado, CONFIG.COLORS.warning], borderWidth: 2, borderColor: '#fff' }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } } }
       });
     } else {
       const realizados = data.filter(r => r.SITUACAO === 'REALIZADO').length;
       const naoRealizados = data.filter(r => r.SITUACAO === 'NÃO REALIZADO').length;
       const pendentes = data.length - realizados - naoRealizados;
-      
       appState[type].charts.status = new Chart(ctx, {
         type: 'doughnut',
-        data: { 
-          labels: ['Realizado', 'Não Realizado', 'Pendente'], 
-          datasets: [{ 
-            data: [realizados, naoRealizados, pendentes], 
-            backgroundColor: [CONFIG.COLORS.success, CONFIG.COLORS.danger, CONFIG.COLORS.warning], 
-            borderWidth: 2, 
-            borderColor: '#fff' 
-          }] 
-        },
-        options: { 
-          responsive: true, 
-          maintainAspectRatio: false, 
-          plugins: { legend: { display: true, position: 'bottom' } } 
-        }
+        data: { labels: ['Realizado', 'Não Realizado', 'Pendente'], datasets: [{ data: [realizados, naoRealizados, pendentes], backgroundColor: [CONFIG.COLORS.success, CONFIG.COLORS.danger, CONFIG.COLORS.warning], borderWidth: 2, borderColor: '#fff' }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } } }
       });
     }
   }
