@@ -1721,15 +1721,19 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
     }
     
     function enviarDadosParaRealtime() {
-        if (!window.firebaseDB) {
-            console.warn('⏳ Firebase não inicializado, aguardando...');
-            return;
+        // CORREÇÃO: verifica se firebaseDB existe globalmente
+        const db = typeof firebaseDB !== 'undefined' ? firebaseDB : 
+                   (typeof window.firebaseDB !== 'undefined' ? window.firebaseDB : null);
+        
+        if (!db) {
+            console.warn('⏳ Firebase DB não disponível, aguardando...');
+            return false;
         }
         
         const dados = coletarDadosReais();
         if (!dados || dados.totalRegistros === 0) {
-            console.log('⏳ Nenhum dado para enviar');
-            return;
+            console.log('⏳ Nenhum dado para enviar (importe uma planilha primeiro)');
+            return false;
         }
         
         const payload = {
@@ -1743,34 +1747,39 @@ document.addEventListener('DOMContentLoaded', () => { UI.init(); });
             lastUpdate: Date.now()
         };
         
-        firebaseDB.ref(COLECAO + '/' + SISTEMA_ID).set(payload)
+        db.ref(COLECAO + '/' + SISTEMA_ID).set(payload)
             .then(() => {
                 console.log('🟢 [SENSOR] Dados enviados:', {
                     total: dados.totalRegistros,
                     realizados: dados.realizados,
-                    percentual: dados.percentualRealizado + '%'
+                    percentual: dados.percentualRealizado + '%',
+                    aba: dados.abaAtiva
                 });
             })
             .catch(err => {
                 console.error('❌ [SENSOR] Erro ao enviar:', err);
             });
+        
+        return true;
     }
     
-    // Inicia o sensor quando o Firebase estiver pronto
+    // Inicia o sensor com verificação periódica
     function iniciarSensor() {
-        if (window.firebaseDB) {
-            console.log('✅ Sensor iniciado - enviando dados a cada 30s');
-            enviarDadosParaRealtime(); // Primeiro envio imediato
-            setInterval(enviarDadosParaRealtime, 30000); // A cada 30s
+        // Tenta enviar imediatamente
+        if (enviarDadosParaRealtime()) {
+            console.log('✅ Sensor ativo - enviando dados a cada 30s');
+            // Configura intervalo após primeiro envio bem-sucedido
+            setInterval(enviarDadosParaRealtime, 30000);
         } else {
-            console.log('⏳ Aguardando Firebase para iniciar sensor...');
-            setTimeout(iniciarSensor, 2000);
+            console.log('⏳ Firebase não pronto ou sem dados, nova tentativa em 5s...');
+            setTimeout(iniciarSensor, 5000);
         }
     }
     
-    // Verifica a cada 2s se o Firebase já inicializou
+    // Inicia após 3 segundos
     setTimeout(iniciarSensor, 3000);
 })();
+</script>
 </script>
 </body>
 </html>
