@@ -928,13 +928,8 @@
             document.getElementById('main-app').classList.remove('hidden');
             document.getElementById('user-email').textContent = user.email;
             renderApps();
-            
-            // Renderiza status dos sensores primeiro
             renderSensorsStatus();
-            
-            // Inicia listeners com tratamento de erro
             initSensorListeners();
-            
             updateTime();
             setInterval(updateTime, 60000);
         }
@@ -950,7 +945,7 @@
         }
 
         // ==========================================
-        // LISTENERS DOS SENSORES (CORRIGIDO - ORDEM DOS VALORES)
+        // LISTENERS DOS SENSORES (VERSÃO FINAL CORRIGIDA)
         // ==========================================
         function initSensorListeners() {
             console.log('🎯 Iniciando listeners dos sensores...');
@@ -958,19 +953,16 @@
             Object.keys(sensors).forEach(sensorId => {
                 const sensorRef = database.ref('sensores/' + sensorId);
                 
-                // Remove listener anterior se existir
                 if (sensorListeners[sensorId]) {
                     sensorRef.off('value', sensorListeners[sensorId]);
                 }
                 
-                // Cria novo listener
                 sensorListeners[sensorId] = sensorRef.on('value', (snapshot) => {
                     const data = snapshot.val();
                     if (data) {
                         console.log(`📡 Sensor ${sensorId}: dados recebidos`);
                         updateSensorCard(sensorId, data);
                     } else {
-                        console.log(`⚠️ Sensor ${sensorId}: sem dados`);
                         setSensorOffline(sensorId);
                     }
                 }, (error) => {
@@ -979,7 +971,6 @@
                 });
             });
             
-            // Força atualização após 2 segundos
             setTimeout(() => {
                 console.log('🔄 Forçando atualização dos sensores...');
                 Object.keys(sensors).forEach(sensorId => {
@@ -996,12 +987,9 @@
         function updateSensorCard(sensorId, data) {
             if (!data) return;
             
-            const config = sensors[sensorId];
             const now = Date.now();
-            
-            // Pega timestamp (pode estar em lugares diferentes)
             const dataTimestamp = data.timestamp || data.lastUpdate || 0;
-            const isRecent = dataTimestamp && (now - dataTimestamp) < 120000; // 2 minutos
+            const isRecent = dataTimestamp && (now - dataTimestamp) < 120000;
             
             // Atualiza status
             const statusEl = document.getElementById('status-' + sensorId);
@@ -1023,17 +1011,81 @@
                 }
             }
             
-            // Extrai valores do sensor
-            // Formato esperado: [total, realizados, pendentes]
+            // Extrai valores
             let valores = data.valores || [0, 0, 0];
+            let v1 = parseFloat(valores[0]) || 0;
+            let v2 = parseFloat(valores[1]) || 0;
+            let v3 = parseFloat(valores[2]) || 0;
             
-            // 🔥 CORREÇÃO: Garantir a ordem correta dos valores
-            let total = parseFloat(valores[0]) || 0;
-            let realizados = parseFloat(valores[1]) || 0;
-            let pendentes = parseFloat(valores[2]) || 0;
+            // CÁLCULO ESPECÍFICO PARA CADA SENSOR
+            let mainValue = 0;
+            let exibirValores = { v1: v1, v2: v2, v3: v3 };
             
-            // Calcula valor para o gauge (% de conclusão baseado nos realizados)
-            let mainValue = total > 0 ? (realizados / total) * 100 : 0;
+            switch(sensorId) {
+                case 'controle': // Sala de Controle
+                    if (v3 > 0) {
+                        mainValue = (v2 / v3) * 100;
+                    }
+                    exibirValores = { v1: v2, v2: v3, v3: 0 };
+                    break;
+                    
+                case 'limpeza': // Limpeza Industrial
+                    total = v1 + v2 + v3;
+                    if (total > 0) {
+                        mainValue = (v3 / total) * 100;
+                    }
+                    exibirValores = { v1: v1, v2: v2, v3: v3 };
+                    break;
+                    
+                case 'rqa': // Qualidade
+                    v1 = v2 + v3;
+                    if (v1 > 0) {
+                        mainValue = (v3 / v1) * 100;
+                    }
+                    exibirValores = { v1: v1, v2: v2, v3: v3 };
+                    break;
+                    
+                case 'infra': // Infraestrutura
+                    if (v1 > 0) {
+                        mainValue = (v2 / v1) * 100;
+                    }
+                    exibirValores = { v1: v1, v2: v2, v3: v3 };
+                    break;
+                    
+                case 'producao': // Dashboard OMs
+                    if (v1 > 0) {
+                        mainValue = (v2 / v1) * 100;
+                    }
+                    exibirValores = { v1: v1, v2: v2, v3: v3 };
+                    break;
+                    
+                case 'correia': // Correias
+                    if (v1 > 0) {
+                        mainValue = (v3 / v1) * 100;
+                    }
+                    exibirValores = { v1: v1, v2: v2, v3: v3 };
+                    break;
+                    
+                case 'auditoria': // Auditoria
+                    if (v1 > 0) {
+                        mainValue = (v2 / v1) * 100;
+                    }
+                    exibirValores = { v1: v1, v2: v2, v3: v3 };
+                    break;
+                    
+                case 'senf': // Fiscal
+                    if (v2 > 0) {
+                        mainValue = (v3 / v2) * 100;
+                    }
+                    exibirValores = { v1: v1, v2: v2, v3: v3 };
+                    break;
+                    
+                default:
+                    if (v1 > 0) {
+                        mainValue = (v2 / v1) * 100;
+                    }
+                    exibirValores = { v1: v1, v2: v2, v3: v3 };
+            }
             
             // Atualiza gauge
             const gauge = document.getElementById('gauge-' + sensorId);
@@ -1041,33 +1093,43 @@
             
             if (gauge && valueEl) {
                 const circumference = 534;
-                const offset = circumference - (Math.min(100, mainValue) / 100) * (circumference * 0.75);
+                const percentual = Math.min(100, mainValue);
+                const offset = circumference - (percentual / 100) * (circumference * 0.75);
                 gauge.style.strokeDashoffset = offset;
-                gauge.setAttribute('data-value', mainValue);
-                valueEl.textContent = mainValue.toFixed(1);
+                valueEl.textContent = percentual.toFixed(1);
             }
             
-            // 🔥 CORREÇÃO: Atualiza os três valores na ordem correta
-            // val1 = Total
-            // val2 = Realizados
-            // val3 = Pendentes
+            // Atualiza os três valores
             const val1El = document.getElementById('val1-' + sensorId);
             const val2El = document.getElementById('val2-' + sensorId);
             const val3El = document.getElementById('val3-' + sensorId);
             
-            if (val1El) val1El.textContent = total;
-            if (val2El) val2El.textContent = realizados;
-            if (val3El) val3El.textContent = pendentes;
-
-            // Caso especial SENF (pode ter formato diferente)
+            if (val1El) val1El.textContent = Number.isInteger(exibirValores.v1) ? exibirValores.v1 : exibirValores.v1.toFixed(1);
+            if (val2El) val2El.textContent = Number.isInteger(exibirValores.v2) ? exibirValores.v2 : exibirValores.v2.toFixed(1);
+            if (val3El) val3El.textContent = Number.isInteger(exibirValores.v3) ? exibirValores.v3 : exibirValores.v3.toFixed(1);
+            
+            // Caso especial SENF
             if (sensorId === 'senf' && data.dadosCompletos && document.getElementById('diff-senf')) {
                 const diff = parseFloat(data.dadosCompletos.diferenca || 0);
                 document.getElementById('diff-senf').textContent =
                     Number.isInteger(diff) ? String(diff) : diff.toFixed(1);
             }
-
+            
             // Atualiza grid de status
-            updateSensorsStatusGrid(sensorId, isRecent, mainValue);
+            const dot = document.getElementById('status-dot-' + sensorId);
+            const text = document.getElementById('status-text-' + sensorId);
+            
+            if (dot && text) {
+                if (isRecent) {
+                    dot.className = 'w-2 h-2 rounded-full bg-emerald-500 status-pulse';
+                    text.textContent = mainValue.toFixed(1) + '%';
+                    text.className = 'text-[10px] text-emerald-400';
+                } else {
+                    dot.className = 'w-2 h-2 rounded-full bg-red-500';
+                    text.textContent = 'Offline';
+                    text.className = 'text-[10px] text-red-400';
+                }
+            }
         }
 
         function setSensorOffline(sensorId) {
@@ -1082,7 +1144,13 @@
                 updateEl.textContent = '--:--:--';
             }
             
-            updateSensorsStatusGrid(sensorId, false, 0);
+            const dot = document.getElementById('status-dot-' + sensorId);
+            const text = document.getElementById('status-text-' + sensorId);
+            if (dot && text) {
+                dot.className = 'w-2 h-2 rounded-full bg-red-500';
+                text.textContent = 'Offline';
+                text.className = 'text-[10px] text-red-400';
+            }
         }
 
         function renderSensorsStatus() {
@@ -1098,34 +1166,6 @@
                     </div>
                 </div>
             `).join('');
-        }
-
-        function updateSensorsStatusGrid(sensorId, isOnline, value) {
-            const dot = document.getElementById('status-dot-' + sensorId);
-            const text = document.getElementById('status-text-' + sensorId);
-            
-            if (dot && text) {
-                if (isOnline) {
-                    dot.className = 'w-2 h-2 rounded-full bg-emerald-500 status-pulse';
-                    text.textContent = value.toFixed(1) + '%';
-                    text.className = 'text-[10px] text-emerald-400';
-                } else {
-                    dot.className = 'w-2 h-2 rounded-full bg-red-500';
-                    text.textContent = 'Offline';
-                    text.className = 'text-[10px] text-red-400';
-                }
-            }
-            
-            // Atualiza contador geral
-            const onlineCount = Object.keys(sensors).filter(id => {
-                const dot = document.getElementById('status-dot-' + id);
-                return dot && dot.classList.contains('bg-emerald-500');
-            }).length;
-            
-            const systemStatus = document.getElementById('system-status');
-            if (systemStatus) {
-                systemStatus.textContent = `${onlineCount}/${Object.keys(sensors).length} sensores online`;
-            }
         }
 
         // ==========================================
