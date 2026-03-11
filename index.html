@@ -449,13 +449,12 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
-<!-- Firebase App (the core Firebase SDK) -->
+<!-- Firebase (APENAS REALTIME DATABASE) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<!-- Firebase Realtime Database (APENAS REALTIME, NÃO FIRESTORE) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
 <script>
-// ==================== CONFIGURAÇÃO UNIFICADA FIREBASE (PROJETO HUB) ====================
+// ==================== CONFIGURAÇÃO FIREBASE (PROJETO HUB) ====================
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDneReMjO78JqJ-LvmSTiQqUMkxT97H6JE",
   authDomain: "naza-auditoria-hub.firebaseapp.com",
@@ -466,11 +465,14 @@ const FIREBASE_CONFIG = {
   appId: "1:1014107842497:web:3338a5438f018df972f140"
 };
 
-// Inicializa Firebase - APENAS REALTIME DATABASE
+// ==================== VARIÁVEIS GLOBAIS ====================
 let firebaseApp = null;
 let database = null;
+let firebaseInitialized = false;
 
 function initFirebase() {
+  if (firebaseInitialized) return true;
+  
   try {
     if (!firebase.apps.length) {
       firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
@@ -478,11 +480,9 @@ function initFirebase() {
       firebaseApp = firebase.app();
     }
     database = firebase.database();
-    console.log('✅ Firebase Realtime Database conectado com sucesso');
+    firebaseInitialized = true;
+    console.log('✅ Firebase Realtime Database conectado');
     updateConnectionStatus(true);
-    
-    // Inicia listeners dos sensores
-    RealtimeSync.init();
     return true;
   } catch (error) {
     console.error('❌ Erro ao inicializar Firebase:', error);
@@ -550,14 +550,18 @@ let appState = {
   currentTab: 'preventiva'
 };
 
-// ==================== SISTEMA DE SINCRONIZAÇÃO COM REALTIME DATABASE ====================
+// ==================== SISTEMA DE SINCRONIZAÇÃO ====================
 const RealtimeSync = {
   enabled: false,
   listeners: {},
   saveTimers: {},
   
   init() {
-    this.enabled = initFirebase();
+    if (!firebaseInitialized) {
+      initFirebase();
+    }
+    this.enabled = firebaseInitialized && database !== null;
+    
     if (this.enabled) {
       this.subscribeAll();
     }
@@ -565,28 +569,30 @@ const RealtimeSync = {
   },
 
   getRef(type) {
-    // Estrutura unificada no Realtime Database
+    if (!database) return null;
     return database.ref('dashboards/samarco/' + type);
   },
 
   subscribeAll() {
-    if (!this.enabled) return;
+    if (!this.enabled || !database) return;
     ['preventiva', 'manutencao', 'corretiva', 'reprogramada'].forEach(type => {
       this.subscribeType(type);
     });
   },
 
   subscribeType(type) {
-    if (!this.enabled || this.listeners[type]) return;
+    if (!this.enabled || !database || this.listeners[type]) return;
 
     const ref = this.getRef(type);
+    if (!ref) return;
+    
     this.listeners[type] = ref.on('value', (snapshot) => {
       const data = snapshot.val();
       if (!data) return;
       
       const items = Array.isArray(data.items) ? data.items : [];
       if (items.length) {
-        console.log(`📥 Dados recebidos do Realtime para ${type}:`, items.length);
+        console.log(`📥 Dados recebidos para ${type}:`, items.length);
         this.applyRemoteData(type, items);
       }
     }, (error) => {
@@ -596,7 +602,6 @@ const RealtimeSync = {
   },
 
   applyRemoteData(type, items) {
-    // Converte datas de string para Date
     const parsedItems = items.map(item => ({
       ...item,
       DATA: item.DATA ? new Date(item.DATA) : null
@@ -605,7 +610,6 @@ const RealtimeSync = {
     appState[type].data = parsedItems;
     appState[type].filtered = [...parsedItems];
 
-    // Atualiza UI
     if (window.UI) {
       UI.updateFilters(type);
       UI.updateTable(type);
@@ -613,12 +617,11 @@ const RealtimeSync = {
       UI.updateCharts(type);
     }
 
-    // Backup local
     localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(parsedItems));
   },
 
   queueSave(type, delay = 700) {
-    if (!this.enabled) return;
+    if (!this.enabled || !database) return;
     clearTimeout(this.saveTimers[type]);
     this.saveTimers[type] = setTimeout(() => {
       this.saveType(type);
@@ -626,7 +629,7 @@ const RealtimeSync = {
   },
 
   saveType(type) {
-    if (!this.enabled) return;
+    if (!this.enabled || !database) return;
 
     const items = appState[type].data.map(item => ({
       ...item,
@@ -635,6 +638,8 @@ const RealtimeSync = {
     }));
 
     const ref = this.getRef(type);
+    if (!ref) return;
+    
     const payload = {
       items,
       count: items.length,
@@ -648,8 +653,6 @@ const RealtimeSync = {
       .then(() => {
         console.log(`💾 Dados de ${type} salvos no Realtime (${items.length})`);
         updateConnectionStatus(true);
-        
-        // Envia sensor para o card unificador
         sendSensorData(type, items);
       })
       .catch(error => {
@@ -667,12 +670,10 @@ const RealtimeSync = {
 function sendSensorData(type, items) {
   if (!database) return;
 
-  // Calcula KPIs para o sensor
   const total = items.length;
   const realizados = items.filter(i => i.SITUACAO === 'REALIZADO').length;
   const pendentes = total - realizados;
   
-  // Estrutura esperada pelo card unificador
   const sensorData = {
     sistema: 'dash_samarco_' + type,
     valores: [total, realizados, pendentes],
@@ -685,7 +686,6 @@ function sendSensorData(type, items) {
     timestamp: Date.now()
   };
 
-  // Salva no caminho que o card unificador lê
   database.ref('sensores/dash_samarco_' + type).set(sensorData)
     .catch(err => console.warn('Erro ao enviar sensor:', err));
 }
@@ -843,7 +843,6 @@ const DataManager = {
       const data = JSON.parse(localStorage.getItem(key) || '[]');
       appState[type].data = data.map(r => ({...r, DATA: r.DATA ? new Date(r.DATA) : null }));
       appState[type].filtered = [...appState[type].data];
-      if (window.UI && typeof UI.updateFilters === 'function') UI.updateFilters(type);
     } catch { 
       appState[type].data = []; 
       appState[type].filtered = []; 
@@ -892,12 +891,14 @@ const DataManager = {
   
   applyFilters(type) {
     const prefix = type === 'preventiva' ? 'prev' : (type === 'manutencao' ? 'mp' : (type === 'corretiva' ? 'mc' : 'mr'));
-    const dateStart = document.getElementById(prefix + 'DateStart').value;
-    const dateEnd   = document.getElementById(prefix + 'DateEnd').value;
-    const area      = document.getElementById(prefix + 'Area').value;
-    const tag       = document.getElementById(prefix + 'Tag').value;
-    const situacao  = document.getElementById(prefix + 'Situacao').value;
+    const dateStart = document.getElementById(prefix + 'DateStart')?.value;
+    const dateEnd   = document.getElementById(prefix + 'DateEnd')?.value;
+    const area      = document.getElementById(prefix + 'Area')?.value;
+    const tag       = document.getElementById(prefix + 'Tag')?.value;
+    const situacao  = document.getElementById(prefix + 'Situacao')?.value;
+    
     let filtered = [...appState[type].data];
+    
     if (dateStart) { 
       const s = new Date(dateStart); 
       filtered = filtered.filter(r => r.DATA && r.DATA >= s); 
@@ -915,6 +916,7 @@ const DataManager = {
     if (situacao) { 
       filtered = filtered.filter(r => r.SITUACAO === Utils.norm(situacao)); 
     }
+    
     appState[type].filtered = filtered;
     UI.updateTable(type); 
     UI.updateKPIs(type); 
@@ -923,11 +925,11 @@ const DataManager = {
   
   clearFilters(type) {
     const prefix = type === 'preventiva' ? 'prev' : (type === 'manutencao' ? 'mp' : (type === 'corretiva' ? 'mc' : 'mr'));
-    document.getElementById(prefix + 'DateStart').value = '';
-    document.getElementById(prefix + 'DateEnd').value = '';
-    document.getElementById(prefix + 'Area').value = '';
-    document.getElementById(prefix + 'Tag').value = '';
-    document.getElementById(prefix + 'Situacao').value = '';
+    const el1 = document.getElementById(prefix + 'DateStart'); if (el1) el1.value = '';
+    const el2 = document.getElementById(prefix + 'DateEnd'); if (el2) el2.value = '';
+    const el3 = document.getElementById(prefix + 'Area'); if (el3) el3.value = '';
+    const el4 = document.getElementById(prefix + 'Tag'); if (el4) el4.value = '';
+    const el5 = document.getElementById(prefix + 'Situacao'); if (el5) el5.value = '';
     this.applyFilters(type);
   },
   
@@ -971,7 +973,7 @@ const DataManager = {
 
 // ==================== INTERFACE DO USUÁRIO ====================
 const UI = {
-  async init() {
+  init() {
     this.setupEventListeners();
     DataManager.load('preventiva'); 
     DataManager.load('manutencao'); 
@@ -982,8 +984,9 @@ const UI = {
     DataManager.applyFilters('corretiva');
     DataManager.applyFilters('reprogramada');
     
-    // Inicializa sincronização em tempo real
-    await RealtimeSync.init();
+    // Inicializa Firebase e sincronização
+    initFirebase();
+    RealtimeSync.init();
   },
   
   setupEventListeners() {
@@ -992,85 +995,142 @@ const UI = {
     });
 
     // Preventiva
-    document.getElementById('inputPrev').addEventListener('change', async (e) => {
-      if (!e.target.files.length) return; 
-      Utils.showLoading();
-      const newRows = await DataManager.processFiles(e.target.files, 'preventiva');
-      appState.preventiva.data.push(...newRows); 
-      DataManager.save('preventiva'); 
-      DataManager.applyFilters('preventiva');
-      e.target.value = ''; 
-      Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
-    });
-    document.getElementById('btnPrevCSV').addEventListener('click', () => DataManager.export('preventiva'));
-    document.getElementById('btnPrevDeleteSel').addEventListener('click', () => DataManager.deleteSelected('preventiva'));
-    document.getElementById('btnPrevDeleteAll').addEventListener('click', () => DataManager.deleteAll('preventiva'));
-    document.getElementById('prevRefresh').addEventListener('click', () => DataManager.applyFilters('preventiva'));
-    document.getElementById('prevClear').addEventListener('click', () => DataManager.clearFilters('preventiva'));
+    const inputPrev = document.getElementById('inputPrev');
+    if (inputPrev) {
+      inputPrev.addEventListener('change', async (e) => {
+        if (!e.target.files.length) return; 
+        Utils.showLoading();
+        const newRows = await DataManager.processFiles(e.target.files, 'preventiva');
+        appState.preventiva.data.push(...newRows); 
+        DataManager.save('preventiva'); 
+        DataManager.applyFilters('preventiva');
+        e.target.value = ''; 
+        Utils.hideLoading(); 
+        Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
+      });
+    }
+    
+    const btnPrevCSV = document.getElementById('btnPrevCSV');
+    if (btnPrevCSV) btnPrevCSV.addEventListener('click', () => DataManager.export('preventiva'));
+    
+    const btnPrevDeleteSel = document.getElementById('btnPrevDeleteSel');
+    if (btnPrevDeleteSel) btnPrevDeleteSel.addEventListener('click', () => DataManager.deleteSelected('preventiva'));
+    
+    const btnPrevDeleteAll = document.getElementById('btnPrevDeleteAll');
+    if (btnPrevDeleteAll) btnPrevDeleteAll.addEventListener('click', () => DataManager.deleteAll('preventiva'));
+    
+    const prevRefresh = document.getElementById('prevRefresh');
+    if (prevRefresh) prevRefresh.addEventListener('click', () => DataManager.applyFilters('preventiva'));
+    
+    const prevClear = document.getElementById('prevClear');
+    if (prevClear) prevClear.addEventListener('click', () => DataManager.clearFilters('preventiva'));
 
     // Manutenção Programada
-    document.getElementById('inputMP').addEventListener('change', async (e) => {
-      if (!e.target.files.length) return; 
-      Utils.showLoading();
-      const newRows = await DataManager.processFiles(e.target.files, 'manutencao');
-      appState.manutencao.data.push(...newRows); 
-      DataManager.save('manutencao'); 
-      DataManager.applyFilters('manutencao');
-      e.target.value = ''; 
-      Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
-    });
-    document.getElementById('btnMPCSV').addEventListener('click', () => DataManager.export('manutencao'));
-    document.getElementById('btnMpDeleteSel').addEventListener('click', () => DataManager.deleteSelected('manutencao'));
-    document.getElementById('btnMpDeleteAll').addEventListener('click', () => DataManager.deleteAll('manutencao'));
-    document.getElementById('mpRefresh').addEventListener('click', () => DataManager.applyFilters('manutencao'));
-    document.getElementById('mpClear').addEventListener('click', () => DataManager.clearFilters('manutencao'));
+    const inputMP = document.getElementById('inputMP');
+    if (inputMP) {
+      inputMP.addEventListener('change', async (e) => {
+        if (!e.target.files.length) return; 
+        Utils.showLoading();
+        const newRows = await DataManager.processFiles(e.target.files, 'manutencao');
+        appState.manutencao.data.push(...newRows); 
+        DataManager.save('manutencao'); 
+        DataManager.applyFilters('manutencao');
+        e.target.value = ''; 
+        Utils.hideLoading(); 
+        Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
+      });
+    }
+    
+    const btnMPCSV = document.getElementById('btnMPCSV');
+    if (btnMPCSV) btnMPCSV.addEventListener('click', () => DataManager.export('manutencao'));
+    
+    const btnMpDeleteSel = document.getElementById('btnMpDeleteSel');
+    if (btnMpDeleteSel) btnMpDeleteSel.addEventListener('click', () => DataManager.deleteSelected('manutencao'));
+    
+    const btnMpDeleteAll = document.getElementById('btnMpDeleteAll');
+    if (btnMpDeleteAll) btnMpDeleteAll.addEventListener('click', () => DataManager.deleteAll('manutencao'));
+    
+    const mpRefresh = document.getElementById('mpRefresh');
+    if (mpRefresh) mpRefresh.addEventListener('click', () => DataManager.applyFilters('manutencao'));
+    
+    const mpClear = document.getElementById('mpClear');
+    if (mpClear) mpClear.addEventListener('click', () => DataManager.clearFilters('manutencao'));
 
     // Manutenção Corretiva
-    document.getElementById('inputMC').addEventListener('change', async (e) => {
-      if (!e.target.files.length) return; 
-      Utils.showLoading();
-      const newRows = await DataManager.processFiles(e.target.files, 'corretiva');
-      appState.corretiva.data.push(...newRows); 
-      DataManager.save('corretiva'); 
-      DataManager.applyFilters('corretiva');
-      e.target.value = ''; 
-      Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
-    });
-    document.getElementById('btnMCCSV').addEventListener('click', () => DataManager.export('corretiva'));
-    document.getElementById('btnMcDeleteSel').addEventListener('click', () => DataManager.deleteSelected('corretiva'));
-    document.getElementById('btnMcDeleteAll').addEventListener('click', () => DataManager.deleteAll('corretiva'));
-    document.getElementById('mcRefresh').addEventListener('click', () => DataManager.applyFilters('corretiva'));
-    document.getElementById('mcClear').addEventListener('click', () => DataManager.clearFilters('corretiva'));
+    const inputMC = document.getElementById('inputMC');
+    if (inputMC) {
+      inputMC.addEventListener('change', async (e) => {
+        if (!e.target.files.length) return; 
+        Utils.showLoading();
+        const newRows = await DataManager.processFiles(e.target.files, 'corretiva');
+        appState.corretiva.data.push(...newRows); 
+        DataManager.save('corretiva'); 
+        DataManager.applyFilters('corretiva');
+        e.target.value = ''; 
+        Utils.hideLoading(); 
+        Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
+      });
+    }
+    
+    const btnMCCSV = document.getElementById('btnMCCSV');
+    if (btnMCCSV) btnMCCSV.addEventListener('click', () => DataManager.export('corretiva'));
+    
+    const btnMcDeleteSel = document.getElementById('btnMcDeleteSel');
+    if (btnMcDeleteSel) btnMcDeleteSel.addEventListener('click', () => DataManager.deleteSelected('corretiva'));
+    
+    const btnMcDeleteAll = document.getElementById('btnMcDeleteAll');
+    if (btnMcDeleteAll) btnMcDeleteAll.addEventListener('click', () => DataManager.deleteAll('corretiva'));
+    
+    const mcRefresh = document.getElementById('mcRefresh');
+    if (mcRefresh) mcRefresh.addEventListener('click', () => DataManager.applyFilters('corretiva'));
+    
+    const mcClear = document.getElementById('mcClear');
+    if (mcClear) mcClear.addEventListener('click', () => DataManager.clearFilters('corretiva'));
 
     // Manutenção Reprogramada
-    document.getElementById('inputMR').addEventListener('change', async (e) => {
-      if (!e.target.files.length) return; 
-      Utils.showLoading();
-      const newRows = await DataManager.processFiles(e.target.files, 'reprogramada');
-      appState.reprogramada.data.push(...newRows); 
-      DataManager.save('reprogramada'); 
-      DataManager.applyFilters('reprogramada');
-      e.target.value = ''; 
-      Utils.hideLoading(); 
-      Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
-    });
-    document.getElementById('btnMRCSV').addEventListener('click', () => DataManager.export('reprogramada'));
-    document.getElementById('btnMrDeleteSel').addEventListener('click', () => DataManager.deleteSelected('reprogramada'));
-    document.getElementById('btnMrDeleteAll').addEventListener('click', () => DataManager.deleteAll('reprogramada'));
-    document.getElementById('mrRefresh').addEventListener('click', () => DataManager.applyFilters('reprogramada'));
-    document.getElementById('mrClear').addEventListener('click', () => DataManager.clearFilters('reprogramada'));
+    const inputMR = document.getElementById('inputMR');
+    if (inputMR) {
+      inputMR.addEventListener('change', async (e) => {
+        if (!e.target.files.length) return; 
+        Utils.showLoading();
+        const newRows = await DataManager.processFiles(e.target.files, 'reprogramada');
+        appState.reprogramada.data.push(...newRows); 
+        DataManager.save('reprogramada'); 
+        DataManager.applyFilters('reprogramada');
+        e.target.value = ''; 
+        Utils.hideLoading(); 
+        Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
+      });
+    }
+    
+    const btnMRCSV = document.getElementById('btnMRCSV');
+    if (btnMRCSV) btnMRCSV.addEventListener('click', () => DataManager.export('reprogramada'));
+    
+    const btnMrDeleteSel = document.getElementById('btnMrDeleteSel');
+    if (btnMrDeleteSel) btnMrDeleteSel.addEventListener('click', () => DataManager.deleteSelected('reprogramada'));
+    
+    const btnMrDeleteAll = document.getElementById('btnMrDeleteAll');
+    if (btnMrDeleteAll) btnMrDeleteAll.addEventListener('click', () => DataManager.deleteAll('reprogramada'));
+    
+    const mrRefresh = document.getElementById('mrRefresh');
+    if (mrRefresh) mrRefresh.addEventListener('click', () => DataManager.applyFilters('reprogramada'));
+    
+    const mrClear = document.getElementById('mrClear');
+    if (mrClear) mrClear.addEventListener('click', () => DataManager.clearFilters('reprogramada'));
 
     // Backup/Restore
-    document.getElementById('btnBackup').addEventListener('click', () => DataManager.backup());
-    document.getElementById('restoreInput').addEventListener('change', async (e) => {
-      if (e.target.files.length) { 
-        await DataManager.restore(e.target.files[0]); 
-        e.target.value = ''; 
-      }
-    });
+    const btnBackup = document.getElementById('btnBackup');
+    if (btnBackup) btnBackup.addEventListener('click', () => DataManager.backup());
+    
+    const restoreInput = document.getElementById('restoreInput');
+    if (restoreInput) {
+      restoreInput.addEventListener('change', async (e) => {
+        if (e.target.files.length) { 
+          await DataManager.restore(e.target.files[0]); 
+          e.target.value = ''; 
+        }
+      });
+    }
   },
   
   switchTab(tab) {
@@ -1112,7 +1172,10 @@ const UI = {
                    'reprogramadaBody';
     const thead = document.getElementById(headId); 
     const tbody = document.getElementById(bodyId);
+    if (!thead || !tbody) return;
+    
     const rows = appState[type].filtered;
+    
     if (!thead.children.length) {
       thead.innerHTML = `
         <th style="width: 40px;"><input type="checkbox" id="${type}CheckAll" class="form-check-input"></th>
@@ -1126,6 +1189,7 @@ const UI = {
         }); 
       }
     }
+    
     tbody.innerHTML = '';
     for (const row of rows) {
       const tr = document.createElement('tr');
@@ -1159,8 +1223,11 @@ const UI = {
     const tags  = Utils.unique(data.map(r => r.TAG).filter(Boolean)).sort();
     const areaSelect = document.getElementById(prefix + 'Area');
     const tagSelect  = document.getElementById(prefix + 'Tag');
+    if (!areaSelect || !tagSelect) return;
+    
     const currentArea = areaSelect.value; 
     const currentTag = tagSelect.value;
+    
     areaSelect.innerHTML = '<option value="">Todas</option>';
     for (const area of areas) { 
       const o = document.createElement('option'); 
@@ -1169,6 +1236,7 @@ const UI = {
       if (area === currentArea) o.selected = true; 
       areaSelect.appendChild(o); 
     }
+    
     tagSelect.innerHTML = '<option value="">Todas</option>';
     for (const tag of tags) { 
       const o = document.createElement('option'); 
@@ -1194,26 +1262,52 @@ const UI = {
       const pendentes = total - realizados - reprogramados;
       const percentRealizado = total > 0 ? Math.round((realizados / total) * 100) : 0;
       
-      document.getElementById('kpi' + K + 'Count').textContent = total;
-      document.getElementById('kpi' + K + 'Areas').textContent = areas;
-      document.getElementById('kpi' + K + 'Tags').textContent = tags;
-      document.getElementById('kpi' + K + 'Rate').textContent = percentRealizado + '%';
-      document.getElementById('kpi' + K + 'Done').textContent = realizados;
-      document.getElementById('kpi' + K + 'Pending').textContent = pendentes;
-      document.getElementById('kpi' + K + 'Reprogramado').textContent = reprogramados;
+      const elCount = document.getElementById('kpi' + K + 'Count');
+      if (elCount) elCount.textContent = total;
+      
+      const elAreas = document.getElementById('kpi' + K + 'Areas');
+      if (elAreas) elAreas.textContent = areas;
+      
+      const elTags = document.getElementById('kpi' + K + 'Tags');
+      if (elTags) elTags.textContent = tags;
+      
+      const elRate = document.getElementById('kpi' + K + 'Rate');
+      if (elRate) elRate.textContent = percentRealizado + '%';
+      
+      const elDone = document.getElementById('kpi' + K + 'Done');
+      if (elDone) elDone.textContent = realizados;
+      
+      const elPending = document.getElementById('kpi' + K + 'Pending');
+      if (elPending) elPending.textContent = pendentes;
+      
+      const elReprogramado = document.getElementById('kpi' + K + 'Reprogramado');
+      if (elReprogramado) elReprogramado.textContent = reprogramados;
     } else {
       const realizados = data.filter(r => r.SITUACAO === 'REALIZADO').length;
       const naoRealizados = data.filter(r => r.SITUACAO === 'NÃO REALIZADO').length;
       const pendentes = total - realizados - naoRealizados;
       const percentRealizado = total > 0 ? Math.round((realizados / total) * 100) : 0;
       
-      document.getElementById('kpi' + K + 'Count').textContent = total;
-      document.getElementById('kpi' + K + 'Areas').textContent = areas;
-      document.getElementById('kpi' + K + 'Tags').textContent = tags;
-      document.getElementById('kpi' + K + 'Rate').textContent = percentRealizado + '%';
-      document.getElementById('kpi' + K + 'Done').textContent = realizados;
-      document.getElementById('kpi' + K + 'Pending').textContent = pendentes;
-      document.getElementById('kpi' + K + 'NotDone').textContent = naoRealizados;
+      const elCount = document.getElementById('kpi' + K + 'Count');
+      if (elCount) elCount.textContent = total;
+      
+      const elAreas = document.getElementById('kpi' + K + 'Areas');
+      if (elAreas) elAreas.textContent = areas;
+      
+      const elTags = document.getElementById('kpi' + K + 'Tags');
+      if (elTags) elTags.textContent = tags;
+      
+      const elRate = document.getElementById('kpi' + K + 'Rate');
+      if (elRate) elRate.textContent = percentRealizado + '%';
+      
+      const elDone = document.getElementById('kpi' + K + 'Done');
+      if (elDone) elDone.textContent = realizados;
+      
+      const elPending = document.getElementById('kpi' + K + 'Pending');
+      if (elPending) elPending.textContent = pendentes;
+      
+      const elNotDone = document.getElementById('kpi' + K + 'NotDone');
+      if (elNotDone) elNotDone.textContent = naoRealizados;
     }
   },
   
@@ -1233,6 +1327,7 @@ const UI = {
     if (!canvas) return; 
     const ctx = canvas.getContext('2d');
     if (appState[type].charts.byArea) appState[type].charts.byArea.destroy();
+    
     const areaCount = {}; 
     for (const row of data) { 
       const a = row.AREA || 'Sem Área'; 
@@ -1240,6 +1335,7 @@ const UI = {
     }
     const labels = Object.keys(areaCount).sort(); 
     const values = labels.map(l => areaCount[l]);
+    
     appState[type].charts.byArea = new Chart(ctx, {
       type: 'bar', 
       data: { 
@@ -1266,6 +1362,7 @@ const UI = {
     if (!canvas) return; 
     const ctx = canvas.getContext('2d');
     if (appState[type].charts.timeline) appState[type].charts.timeline.destroy();
+    
     const dateCount = {}; 
     for (const row of data) { 
       if (!row.DATA) continue; 
@@ -1278,6 +1375,7 @@ const UI = {
       return new Date(yA, mA - 1, dA) - new Date(yB, mB - 1, dB);
     });
     const values = labels.map(l => dateCount[l]);
+    
     appState[type].charts.timeline = new Chart(ctx, {
       type: 'line',
       data: { 
@@ -1306,6 +1404,7 @@ const UI = {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (appState[type].charts.pareto) appState[type].charts.pareto.destroy();
+    
     const tagCount = {}; 
     for (const row of data) { 
       const t = row.TAG || 'Sem Tag'; 
@@ -1322,6 +1421,7 @@ const UI = {
       sum += v; 
       cumulative.push((sum / total) * 100); 
     }
+    
     appState[type].charts.pareto = new Chart(ctx, {
       type: 'bar',
       data: { 
@@ -1452,7 +1552,9 @@ const UI = {
 };
 
 // ==================== INICIALIZAÇÃO ====================
-document.addEventListener('DOMContentLoaded', () => { UI.init(); });
+document.addEventListener('DOMContentLoaded', () => { 
+  UI.init(); 
+});
 </script>
 
 <!-- Export PNG Paginado -->
