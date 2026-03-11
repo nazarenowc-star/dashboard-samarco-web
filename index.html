@@ -1,1224 +1,1757 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NAZA MINA | Central de Operações</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard Samarco — Versão Unificada</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --brand: #004c97;
+      --accent: #1aa06d;
+      --ink: #0f172a;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --bg: #f7fafb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    html, body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      font-size: 14px;
+    }
+    .app-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(2, 14, 33, 0.06);
+      transition: box-shadow 0.3s ease;
+    }
+    .app-card:hover { box-shadow: 0 8px 24px rgba(2, 14, 33, 0.1); }
+    .tab-btn {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0.75rem 1.25rem;
+      background: #fff;
+      color: var(--brand);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .tab-btn:hover { background: #f8fafc; border-color: var(--brand); }
+    .tab-btn.active {
+      background: linear-gradient(180deg, #e7f1ff, #ffffff);
+      border-color: #c7e0ff;
+      box-shadow: 0 2px 8px rgba(0, 76, 151, 0.15);
+    }
+    thead th {
+      position: sticky; top: 0; background: #f3f7ff; z-index: 2;
+      font-weight: 700; font-size: 0.8rem; text-transform: uppercase;
+      letter-spacing: 0.5px; padding: 0.75rem 0.5rem; border-bottom: 2px solid var(--brand);
+    }
+    .kpi {
+      border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.25rem;
+      background: #fff; min-width: 140px; text-align: center; transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .kpi:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .kpi .label { font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: .5rem; }
+    .kpi .value { font-weight: 800; font-size: 1.75rem; color: var(--accent); line-height: 1; }
+    .table-container { border: 1px solid var(--line); border-radius: 12px; overflow: auto; max-height: 65vh; background: #fff; }
+    .table { margin-bottom: 0; }
+    .table tbody tr { transition: background-color 0.2s ease; }
+    .table tbody tr:hover { background-color: #f8fafc; }
+    .table td { padding: 0.75rem 0.5rem; font-size: 0.85rem; vertical-align: middle; }
+    .badge-status { padding: 0.35rem 0.75rem; border-radius: 999px; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .5px; }
+    .badge-realizado { background: #d1fae5; color: #065f46; }
+    .badge-nao-realizado { background: #fee2e2; color: #991b1b; }
+    .badge-pendente { background: #fef3c7; color: #92400e; }
+    .badge-reprogramado { background: #e0e7ff; color: #3730a3; }
+    canvas { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+    .chip { border: 1px solid var(--line); background: #fff; color: var(--brand); border-radius: 999px; padding: 0.35rem 0.85rem; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: .5rem; }
+    #loading { position: fixed; inset: 0; background: rgba(255,255,255,0.9); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
+    #loading.show { display: flex; }
+    .btn { transition: all 0.3s ease; font-weight: 600; }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+    .controls-section { background: #f8fafc; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+    .filter-section { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+    .chart-container { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+    .chart-title { font-weight: 700; font-size: 0.95rem; color: var(--brand); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: .5px; }
+    .form-label { font-weight: 600; font-size: 0.8rem; color: var(--ink); margin-bottom: 0.35rem; }
+    .form-control, .form-select { border-radius: 8px; border: 1px solid var(--line); font-size: 0.85rem; }
+    .form-control:focus, .form-select:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(0,76,151,0.1); }
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-    
-    <!-- Phosphor Icons -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
-                    },
-                    colors: {
-                        mining: {
-                            950: '#0a0f1c',
-                            900: '#111827',
-                            800: '#1f2937',
-                            700: '#374151',
-                            accent: '#f59e0b',
-                            success: '#10b981',
-                            danger: '#ef4444',
-                            warning: '#f59e0b',
-                            info: '#3b82f6',
-                            purple: '#8b5cf6',
-                            cyan: '#06b6d4',
-                            pink: '#ec4899'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <style>
-        body {
-            background-color: #0f172a;
-            background-image: 
-                radial-gradient(circle at 20% 50%, rgba(245, 158, 11, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 40% 20%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
-            color: #e2e8f0;
-            overflow: hidden;
-        }
-        
-        .glass-panel {
-            background: rgba(17, 24, 39, 0.7);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-        }
-        
-        .metric-card {
-            background: linear-gradient(145deg, rgba(17, 24, 39, 0.9) 0%, rgba(31, 41, 55, 0.6) 100%);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-        }
-        
-        .metric-card:hover {
-            transform: translateY(-4px);
-            border-color: rgba(245, 158, 11, 0.3);
-            box-shadow: 0 8px 40px rgba(245, 158, 11, 0.1);
-        }
-        
-        .gauge-container {
-            position: relative;
-            width: 140px;
-            height: 140px;
-        }
-        
-        .gauge-bg {
-            fill: none;
-            stroke: #1f2937;
-            stroke-width: 12;
-        }
-        
-        .gauge-fill {
-            fill: none;
-            stroke-width: 12;
-            stroke-linecap: round;
-            transform: rotate(-90deg);
-            transform-origin: 50% 50%;
-            transition: stroke-dashoffset 1s ease-out;
-            filter: drop-shadow(0 0 8px currentColor);
-        }
-        
-        .gauge-value {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -40%);
-            text-align: center;
-        }
-        
-        .chart-container {
-            position: relative;
-            height: 200px;
-            width: 100%;
-        }
-        
-        .kpi-value {
-            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: 0 0 30px rgba(245, 158, 11, 0.3);
-        }
-        
-        .status-pulse {
-            animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        
-        @keyframes pulse-glow {
-            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            50% { opacity: 0.8; box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-        }
-        
-        .app-card {
-            transition: all 0.3s ease;
-        }
-        
-        .app-card:hover {
-            transform: translateX(8px);
-            background: rgba(245, 158, 11, 0.1);
-            border-left-color: #f59e0b;
-        }
-        
-        .scrollbar-thin::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .scrollbar-thin::-webkit-scrollbar-track {
-            background: #111827;
-        }
-        
-        .scrollbar-thin::-webkit-scrollbar-thumb {
-            background: #374151;
-            border-radius: 3px;
-        }
-        
-        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-            background: #f59e0b;
-        }
-        
-        .iframe-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            background: #0f172a;
-        }
-        
-        .iframe-container iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            background: white;
-        }
-        
-        .loading-spinner {
-            border: 3px solid rgba(245, 158, 11, 0.3);
-            border-top-color: #f59e0b;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .gradient-text {
-            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #fff 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .neon-border {
-            box-shadow: 0 0 20px rgba(245, 158, 11, 0.2), inset 0 0 20px rgba(245, 158, 11, 0.05);
-        }
-        
-        .sensor-status {
-            transition: all 0.3s ease;
-            font-size: 10px;
-            font-weight: bold;
-            padding: 2px 8px;
-            border-radius: 4px;
-            border: 1px solid;
-        }
-        
-        .sensor-status.online {
-            background: rgba(16, 185, 129, 0.1);
-            border-color: rgba(16, 185, 129, 0.5);
-            color: #10b981;
-        }
-        
-        .sensor-status.offline {
-            background: rgba(239, 68, 68, 0.1);
-            border-color: rgba(239, 68, 68, 0.5);
-            color: #ef4444;
-        }
-        
-        .last-update {
-            font-size: 10px;
-            color: #64748b;
-            font-family: 'JetBrains Mono', monospace;
-        }
-        
-        .data-value {
-            font-variant-numeric: tabular-nums;
-        }
-    </style>
+    /* Status indicator */
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    .status-online {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .status-offline {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    .status-online .status-dot {
+      background: #10b981;
+    }
+    .status-offline .status-dot {
+      background: #ef4444;
+      animation: none;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+
+  <style>
+    .page-capture{width:1400px;height:990px;box-sizing:border-box;padding:24px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;display:flex;flex-direction:column;gap:12px;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    .page-row{display:flex;gap:12px}.page-col{flex:1 1 0}.page-title{font-weight:800;color:#004c97;font-size:22px;margin:0}.page-sub{color:#6b7280;font-size:13px;margin:0}
+    .chart-grid{display:grid;grid-template-columns:1fr 1fr;grid-gap:12px}.chart-card{border:1px solid #e5e7eb;border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px}
+    .chart-card h6{margin:0;font-size:12px;color:#004c97;text-transform:uppercase;letter-spacing:.5px}.chart-img{width:100%;height:100%;object-fit:contain}
+    .table-mini{width:100%;border-collapse:collapse;font-size:12px}.table-mini th,.table-mini td{border:1px solid #e5e7eb;padding:6px 8px;text-align:left;vertical-align:top}
+    .page-footer{margin-top:auto;font-size:11px;color:#6b7280;display:flex;justify-content:space-between}
+    #_offscreen_pageroot{position:fixed;left:-99999px;top:-99999px;width:0;height:0;overflow:hidden}
+    .kpi .label{font-size:11px}.kpi .value{font-size:22px}
+  </style>
 </head>
-<body class="h-screen w-screen overflow-hidden">
+<body>
+<div id="loading">
+  <div class="text-center">
+    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+    <div class="mt-3 fw-bold fs-5" style="color: var(--brand)">Processando planilhas…</div>
+  </div>
+</div>
 
-    <!-- Tela de Login -->
-    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-mining-950">
-        <div class="glass-panel rounded-2xl p-8 w-full max-w-md mx-4 shadow-2xl">
-            <div class="text-center mb-8">
-                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-mining-accent/20 to-mining-accent/5 mb-4 neon-border">
-                    <i class="ph ph-hard-hat text-4xl text-mining-accent"></i>
-                </div>
-                <h1 class="text-3xl font-bold gradient-text mb-1">NAZA MINA</h1>
-                <p class="text-slate-400 text-sm">Central de Operações Integrada</p>
-            </div>
-            
-            <form id="login-form" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">E-mail</label>
-                    <div class="relative">
-                        <i class="ph ph-envelope absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                        <input type="email" id="email" required 
-                            class="w-full bg-mining-800/50 border border-mining-700 rounded-lg py-3 pl-10 pr-4 text-white placeholder-slate-500 focus:outline-none focus:border-mining-accent focus:ring-1 focus:ring-mining-accent transition-colors"
-                            placeholder="usuario@naza.local">
-                    </div>
-                </div>
-                
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Senha</label>
-                    <div class="relative">
-                        <i class="ph ph-lock-key absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                        <input type="password" id="password" required 
-                            class="w-full bg-mining-800/50 border border-mining-700 rounded-lg py-3 pl-10 pr-4 text-white placeholder-slate-500 focus:outline-none focus:border-mining-accent focus:ring-1 focus:ring-mining-accent transition-colors"
-                            placeholder="••••••••">
-                    </div>
-                </div>
-                
-                <div id="login-error" class="hidden text-red-500 text-sm text-center"></div>
-                
-                <button type="submit" id="login-btn" 
-                    class="w-full bg-gradient-to-r from-mining-accent to-amber-600 hover:from-amber-500 hover:to-amber-700 text-mining-900 font-bold py-3 rounded-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-mining-accent/20">
-                    <span>Entrar no Sistema</span>
-                    <i class="ph ph-arrow-right"></i>
-                </button>
-            </form>
-            
-            <div class="mt-6 pt-6 border-t border-mining-700/50 text-center">
-                <p class="text-xs text-slate-500">Acesso restrito a usuários autorizados</p>
-            </div>
+<div class="container-fluid py-4">
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between app-card p-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fa-solid fa-chart-line fs-2" style="color: var(--brand)"></i>
+      <div>
+        <h1 class="h4 m-0" style="color: var(--brand)">Dashboard Samarco</h1>
+        <p class="text-muted m-0" style="font-size: 0.85rem;">Gestão de Programação — Preventiva, Manutenção e Reprogramada</p>
+      </div>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      <!-- Status Indicator -->
+      <div id="connectionStatus" class="status-indicator status-offline">
+        <span class="status-dot"></span>
+        <span id="statusText">Offline</span>
+      </div>
+      <button id="btnBackup" class="btn btn-outline-secondary btn-sm">
+        <i class="fa-solid fa-download"></i> Backup JSON
+      </button>
+      <label class="btn btn-outline-secondary btn-sm mb-0">
+        <i class="fa-solid fa-upload"></i> Restaurar JSON
+        <input id="restoreInput" type="file" accept=".json" hidden/>
+      </label>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="d-flex gap-3 mb-4">
+    <button class="tab-btn active" data-tab="preventiva" type="button">
+      <i class="fa-solid fa-broom"></i> Programação Preventiva
+    </button>
+    <button class="tab-btn" data-tab="manutencao" type="button">
+      <i class="fa-solid fa-screwdriver-wrench"></i> Manutenção Programada
+    </button>
+    <button class="tab-btn" data-tab="corretiva" type="button">
+      <i class="fa-solid fa-gear"></i> Manutenção Corretiva
+    </button>
+    <button class="tab-btn" data-tab="reprogramada" type="button">
+      <i class="fa-solid fa-calendar-week"></i> Manutenção Reprogramada
+    </button>
+  </div>
+
+  <!-- Preventiva Tab -->
+  <div id="tab-preventiva" class="tab-content" style="display: block">
+    <div class="app-card p-4">
+      <!-- Controls -->
+      <div class="controls-section">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="chip">
+              <i class="fa-regular fa-file-excel"></i> Planilhas (Preventiva)
+            </span>
+            <label class="btn btn-sm btn-primary mb-0" style="background: var(--brand); border-color: var(--brand);">
+              <i class="fa-solid fa-file-arrow-up"></i> Importar Excel
+              <input id="inputPrev" type="file" accept=".xlsx,.xls" hidden multiple/>
+            </label>
+            <button id="btnPrevCSV" class="btn btn-sm btn-outline-secondary">
+              <i class="fa-solid fa-file-export"></i> Exportar CSV
+            </button>
+            <button id="btnPrevExportPNG" class="btn btn-sm btn-outline-info">
+              <i class="fa-solid fa-image"></i> Exportar PNG
+            </button>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button id="btnPrevDeleteSel" class="btn btn-sm btn-outline-danger">
+              <i class="fa-solid fa-trash"></i> Excluir Selecionados
+            </button>
+            <button id="btnPrevDeleteAll" class="btn btn-sm btn-danger">
+              <i class="fa-regular fa-trash-can"></i> Excluir Tudo
+            </button>
+          </div>
         </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="d-flex flex-wrap gap-3 mb-4">
+        <div class="kpi"><div class="label">Total de Registros</div><div id="kpiPrevCount" class="value">0</div></div>
+        <div class="kpi"><div class="label">Áreas Distintas</div><div id="kpiPrevAreas" class="value">0</div></div>
+        <div class="kpi"><div class="label">Tags Distintas</div><div id="kpiPrevTags" class="value">0</div></div>
+        <div class="kpi"><div class="label">% Realizado</div><div id="kpiPrevRate" class="value">0%</div></div>
+        <div class="kpi"><div class="label">Realizados</div><div id="kpiPrevDone" class="value" style="color: var(--success);">0</div></div>
+        <div class="kpi"><div class="label">Pendentes</div><div id="kpiPrevPending" class="value" style="color: var(--warning);">0</div></div>
+        <div class="kpi"><div class="label">Não Realizados</div><div id="kpiPrevNotDone" class="value" style="color: var(--danger);">0</div></div>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-12 col-xl-5">
+          <div class="filter-section mb-3">
+            <h6 class="chart-title mb-3"><i class="fa-solid fa-filter"></i> Filtros</h6>
+            <div class="row g-2">
+              <div class="col-6"><label class="form-label">Data (início)</label><input id="prevDateStart" type="date" class="form-control form-control-sm"></div>
+              <div class="col-6"><label class="form-label">Data (fim)</label><input id="prevDateEnd" type="date" class="form-control form-control-sm"></div>
+              <div class="col-4"><label class="form-label">Área</label><select id="prevArea" class="form-select form-select-sm"><option value="">Todas</option></select></div>
+              <div class="col-4"><label class="form-label">Tag</label><select id="prevTag" class="form-select form-select-sm"><option value="">Todas</option></select></div>
+              <div class="col-4"><label class="form-label">Situação</label><select id="prevSituacao" class="form-select form-select-sm"><option value="">Todas</option><option>REALIZADO</option><option>NÃO REALIZADO</option><option>PENDENTE</option></select></div>
+              <div class="col-12 d-flex gap-2 mt-3">
+                <button id="prevClear" class="btn btn-sm btn-secondary flex-grow-1"><i class="fa-solid fa-rotate"></i> Limpar Filtros</button>
+                <button id="prevRefresh" class="btn btn-sm btn-primary flex-grow-1" style="background: var(--brand); border-color: var(--brand);"><i class="fa-solid fa-filter"></i> Aplicar Filtros</button>
+              </div>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="table table-sm table-hover align-middle">
+              <thead><tr id="preventivaHead"></tr></thead>
+              <tbody id="preventivaBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="col-12 col-xl-7">
+          <div class="row g-3">
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-bar"></i> Distribuição por Área</h6><div style="height: 240px"><canvas id="prevByArea"></canvas></div></div></div>
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-line"></i> Linha do Tempo</h6><div style="height: 240px"><canvas id="prevTimeline"></canvas></div></div></div>
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-column"></i> Análise de Pareto por Tag</h6><div style="height: 280px"><canvas id="prevPareto"></canvas></div></div></div>
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-pie"></i> Status das Atividades</h6><div style="height: 240px"><canvas id="prevStatus"></canvas></div></div></div>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Tela Principal -->
-    <div id="main-app" class="hidden h-full flex">
-        
-        <!-- Sidebar -->
-        <aside class="w-80 bg-mining-900/95 border-r border-mining-800 flex flex-col h-full glass-panel">
-            <div class="p-6 border-b border-mining-800">
-                <div class="flex items-center gap-3 mb-1">
-                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-mining-accent/20 to-mining-accent/5 flex items-center justify-center neon-border">
-                        <i class="ph ph-hard-hat text-2xl text-mining-accent"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-xl font-bold gradient-text tracking-tight">NAZA MINA</h1>
-                        <p class="text-xs text-slate-400">Central de Operações</p>
-                    </div>
-                </div>
+  <!-- Manutenção Programada Tab -->
+  <div id="tab-manutencao" class="tab-content" style="display:none">
+    <div class="app-card p-4">
+      <div class="controls-section">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="chip"><i class="fa-regular fa-file-excel"></i> Planilhas (Manutenção)</span>
+            <label class="btn btn-sm btn-primary mb-0" style="background: var(--brand); border-color: var(--brand);"><i class="fa-solid fa-file-arrow-up"></i> Importar Excel<input id="inputMP" type="file" accept=".xlsx,.xls" hidden multiple/></label>
+            <button id="btnMPCSV" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-file-export"></i> Exportar CSV</button>
+            <button id="btnMPExportPNG" class="btn btn-sm btn-outline-info"><i class="fa-solid fa-image"></i> Exportar PNG</button>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button id="btnMpDeleteSel" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i> Excluir Selecionados</button>
+            <button id="btnMpDeleteAll" class="btn btn-sm btn-danger"><i class="fa-regular fa-trash-can"></i> Excluir Tudo</button>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-3 mb-4">
+        <div class="kpi"><div class="label">Total de Registros</div><div id="kpiMpCount" class="value">0</div></div>
+        <div class="kpi"><div class="label">Áreas Distintas</div><div id="kpiMpAreas" class="value">0</div></div>
+        <div class="kpi"><div class="label">Tags Distintas</div><div id="kpiMpTags" class="value">0</div></div>
+        <div class="kpi"><div class="label">% Realizado</div><div id="kpiMpRate" class="value">0%</div></div>
+        <div class="kpi"><div class="label">Realizados</div><div id="kpiMpDone" class="value" style="color: var(--success);">0</div></div>
+        <div class="kpi"><div class="label">Pendentes</div><div id="kpiMpPending" class="value" style="color: var(--warning);">0</div></div>
+        <div class="kpi"><div class="label">Não Realizados</div><div id="kpiMpNotDone" class="value" style="color: var(--danger);">0</div></div>
+      </div>
+      <div class="row g-4">
+        <div class="col-12 col-xl-5">
+          <div class="filter-section mb-3">
+            <h6 class="chart-title mb-3"><i class="fa-solid fa-filter"></i> Filtros</h6>
+            <div class="row g-2">
+              <div class="col-6"><label class="form-label">Data (início)</label><input id="mpDateStart" type="date" class="form-control form-control-sm"></div>
+              <div class="col-6"><label class="form-label">Data (fim)</label><input id="mpDateEnd" type="date" class="form-control form-control-sm"></div>
+              <div class="col-4"><label class="form-label">Área</label><select id="mpArea" class="form-select form-select-sm"><option value="">Todas</option></select></div>
+              <div class="col-4"><label class="form-label">Tag</label><select id="mpTag" class="form-select form-select-sm"><option value="">Todas</option></select></div>
+              <div class="col-4"><label class="form-label">Situação</label><select id="mpSituacao" class="form-select form-select-sm"><option value="">Todas</option><option>REALIZADO</option><option>NÃO REALIZADO</option><option>PENDENTE</option></select></div>
+              <div class="col-12 d-flex gap-2 mt-3">
+                <button id="mpClear" class="btn btn-sm btn-secondary flex-grow-1"><i class="fa-solid fa-rotate"></i> Limpar Filtros</button>
+                <button id="mpRefresh" class="btn btn-sm btn-primary flex-grow-1" style="background: var(--brand); border-color: var(--brand);"><i class="fa-solid fa-filter"></i> Aplicar Filtros</button>
+              </div>
             </div>
-
-            <div class="p-4 border-b border-mining-800">
-                <div class="relative">
-                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                    <input type="text" id="search-apps" 
-                        class="w-full bg-mining-800/50 border border-mining-700 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-mining-accent transition-colors"
-                        placeholder="Buscar módulos...">
-                </div>
-            </div>
-
-            <div class="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-2" id="apps-container"></div>
-
-            <div class="p-4 border-t border-mining-800 bg-mining-900/50">
-                <div class="flex items-center gap-3 mb-3">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-mining-accent/20 to-mining-accent/5 flex items-center justify-center">
-                        <i class="ph ph-user text-xl text-mining-accent"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-white truncate" id="user-email">-</p>
-                        <p class="text-xs text-emerald-400 flex items-center gap-1">
-                            <span class="w-2 h-2 rounded-full bg-emerald-500 status-pulse"></span>
-                            Online
-                        </p>
-                    </div>
-                </div>
-                <button onclick="logout()" 
-                    class="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-mining-700 text-slate-300 hover:bg-mining-800 hover:text-white transition-colors text-sm">
-                    <i class="ph ph-sign-out"></i>
-                    <span>Sair do Sistema</span>
-                </button>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="flex-1 flex flex-col h-full bg-mining-950 relative overflow-hidden">
-            
-            <!-- Top Bar -->
-            <header class="h-16 bg-mining-900/80 border-b border-mining-800 flex items-center justify-between px-6 backdrop-blur-sm z-10">
-                <div class="flex items-center gap-4">
-                    <button onclick="showHome()" 
-                        class="flex items-center gap-2 px-4 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-mining-800 transition-colors">
-                        <i class="ph ph-house text-lg"></i>
-                        <span class="text-sm font-medium">Dashboard</span>
-                    </button>
-                    
-                    <div class="h-6 w-px bg-mining-700"></div>
-                    
-                    <div id="current-module-info" class="hidden flex items-center gap-3">
-                        <span class="px-2 py-1 rounded bg-mining-accent/10 text-mining-accent text-xs font-mono font-bold" id="current-short">-</span>
-                        <h2 class="text-white font-semibold" id="current-name">-</h2>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-3" id="action-buttons" style="display: none;">
-                    <button onclick="backToPortal()" 
-                        class="flex items-center gap-2 px-4 py-2 rounded-lg bg-mining-800 text-slate-300 hover:text-white hover:bg-mining-700 transition-colors text-sm border border-mining-700">
-                        <i class="ph ph-arrow-u-up-left"></i>
-                        <span>Voltar ao Dashboard</span>
-                    </button>
-                    
-                    <button onclick="openDirect()" 
-                        class="flex items-center gap-2 px-4 py-2 rounded-lg bg-mining-accent/10 text-mining-accent hover:bg-mining-accent/20 transition-colors text-sm border border-mining-accent/30">
-                        <i class="ph ph-arrow-square-out"></i>
-                        <span>Abrir Externo</span>
-                    </button>
-                </div>
-            </header>
-
-            <!-- Content Area -->
-            <div class="flex-1 relative overflow-hidden" id="content-area">
-                
-                <!-- DASHBOARD EXECUTIVO -->
-                <div id="home-view" class="absolute inset-0 p-6 overflow-y-auto scrollbar-thin">
-                    <div class="max-w-[1600px] mx-auto">
-                        
-                        <!-- Header -->
-                        <div class="mb-8 flex items-end justify-between">
-                            <div>
-                                <h2 class="text-3xl font-bold text-white mb-2">Dashboard Executivo</h2>
-                                <p class="text-slate-400">Visão integrada de todos os setores operacionais</p>
-                            </div>
-                            <div class="flex items-center gap-4">
-                                <div class="flex items-center gap-2 text-xs text-slate-400 bg-mining-800/50 px-3 py-1.5 rounded-full border border-mining-700">
-                                    <i class="ph ph-wifi-high text-emerald-400"></i>
-                                    <span id="connection-status">Conectado</span>
-                                </div>
-                                <div class="flex items-center gap-2 text-sm text-slate-400">
-                                    <i class="ph ph-clock text-mining-accent"></i>
-                                    <span id="current-time">--:--</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- GRID PRINCIPAL - 4 colunas -->
-                        <div class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-6">
-                            
-                            <!-- 1. SALA DE CONTROLE -->
-                            <div class="metric-card rounded-2xl p-5 border-t-4 border-blue-500" id="card-controle">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                                            <i class="ph ph-control text-2xl text-blue-400"></i>
-                                        </div>
-                                        <div>
-                                            <h3 class="text-white font-bold text-lg">Sala de Controle</h3>
-                                            <p class="text-xs text-blue-400">RDO + Comparador</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-col items-end gap-1">
-                                        <span class="sensor-status offline" id="status-controle">OFFLINE</span>
-                                        <span class="last-update" id="update-controle">--:--:--</span>
-                                    </div>
-                                </div>
-
-                                <div class="flex justify-center mb-4">
-                                    <div class="gauge-container">
-                                        <svg viewBox="0 0 200 200" class="w-full h-full transform -rotate-90">
-                                            <circle cx="100" cy="100" r="85" class="gauge-bg" stroke-dasharray="534" stroke-dashoffset="133.5"/>
-                                            <circle cx="100" cy="100" r="85" class="gauge-fill stroke-blue-500" id="gauge-controle" stroke-dasharray="534" stroke-dashoffset="534" data-value="0"/>
-                                        </svg>
-                                        <div class="gauge-value">
-                                            <span class="text-2xl font-bold text-white kpi-value data-value" id="value-controle">--</span>
-                                            <span class="text-[10px] text-slate-400 block mt-1">%</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mb-4">
-                                    <div class="flex justify-between items-center mb-2">
-                                        <span class="text-xs text-slate-400">Últimos valores</span>
-                                    </div>
-                                    <div class="grid grid-cols-3 gap-2 text-center">
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val1-controle">--</div>
-                                            <div class="text-[10px] text-slate-400">Operad.</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val2-controle">--</div>
-                                            <div class="text-[10px] text-slate-400">Críticos</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val3-controle">--</div>
-                                            <div class="text-[10px] text-slate-400">MES</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 2. AUDITORIA -->
-                            <div class="metric-card rounded-2xl p-5 border-t-4 border-purple-500" id="card-auditoria">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                                            <i class="ph ph-shield-check text-2xl text-purple-400"></i>
-                                        </div>
-                                        <div>
-                                            <h3 class="text-white font-bold text-lg">Auditoria</h3>
-                                            <p class="text-xs text-purple-400">Logs e Compliance</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-col items-end gap-1">
-                                        <span class="sensor-status offline" id="status-auditoria">OFFLINE</span>
-                                        <span class="last-update" id="update-auditoria">--:--:--</span>
-                                    </div>
-                                </div>
-
-                                <div class="flex justify-center mb-4">
-                                    <div class="gauge-container">
-                                        <svg viewBox="0 0 200 200" class="w-full h-full transform -rotate-90">
-                                            <circle cx="100" cy="100" r="85" class="gauge-bg" stroke-dasharray="534" stroke-dashoffset="133.5"/>
-                                            <circle cx="100" cy="100" r="85" class="gauge-fill stroke-purple-500" id="gauge-auditoria" stroke-dasharray="534" stroke-dashoffset="534" data-value="0"/>
-                                        </svg>
-                                        <div class="gauge-value">
-                                            <span class="text-2xl font-bold text-white data-value" id="value-auditoria">--</span>
-                                            <span class="text-[10px] text-slate-400 block mt-1">%</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mb-4">
-                                    <div class="flex justify-between items-center mb-2">
-                                        <span class="text-xs text-slate-400">Últimos valores</span>
-                                    </div>
-                                    <div class="grid grid-cols-3 gap-2 text-center">
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val1-auditoria">--</div>
-                                            <div class="text-[10px] text-slate-400">Total</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val2-auditoria">--</div>
-                                            <div class="text-[10px] text-slate-400">Revisar</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val3-auditoria">--</div>
-                                            <div class="text-[10px] text-slate-400">Sem justif.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 3. PRODUÇÃO (DASHBOARD OMs) -->
-                            <div class="metric-card rounded-2xl p-5 border-t-4 border-emerald-500" id="card-producao">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                                            <i class="ph ph-chart-line-up text-2xl text-emerald-400"></i>
-                                        </div>
-                                        <div>
-                                            <h3 class="text-white font-bold text-lg">Dashboard OMs</h3>
-                                            <p class="text-xs text-emerald-400">Dashboard OMs</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-col items-end gap-1">
-                                        <span class="sensor-status offline" id="status-producao">OFFLINE</span>
-                                        <span class="last-update" id="update-producao">--:--:--</span>
-                                    </div>
-                                </div>
-
-                                <div class="flex justify-center mb-4">
-                                    <div class="gauge-container">
-                                        <svg viewBox="0 0 200 200" class="w-full h-full transform -rotate-90">
-                                            <circle cx="100" cy="100" r="85" class="gauge-bg" stroke-dasharray="534" stroke-dashoffset="133.5"/>
-                                            <circle cx="100" cy="100" r="85" class="gauge-fill stroke-emerald-500" id="gauge-producao" stroke-dasharray="534" stroke-dashoffset="534" data-value="0"/>
-                                        </svg>
-                                        <div class="gauge-value">
-                                            <span class="text-2xl font-bold text-white data-value" id="value-producao">--</span>
-                                            <span class="text-[10px] text-slate-400 block mt-1">%</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mb-4">
-                                    <div class="flex justify-between items-center mb-2">
-                                        <span class="text-xs text-slate-400">Últimos valores</span>
-                                    </div>
-                                    <div class="grid grid-cols-3 gap-2 text-center">
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val1-producao">--</div>
-                                            <div class="text-[10px] text-slate-400">Total Reg.</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val2-producao">--</div>
-                                            <div class="text-[10px] text-slate-400">Realizados</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val3-producao">--</div>
-                                            <div class="text-[10px] text-slate-400">Pendentes</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 4. LIMPEZA -->
-                            <div class="metric-card rounded-2xl p-5 border-t-4 border-cyan-500" id="card-limpeza">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
-                                            <i class="ph ph-broom text-2xl text-cyan-400"></i>
-                                        </div>
-                                        <div>
-                                            <h3 class="text-white font-bold text-lg">Limpeza</h3>
-                                            <p class="text-xs text-cyan-400">Industrial</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-col items-end gap-1">
-                                        <span class="sensor-status offline" id="status-limpeza">OFFLINE</span>
-                                        <span class="last-update" id="update-limpeza">--:--:--</span>
-                                    </div>
-                                </div>
-
-                                <div class="flex justify-center mb-4">
-                                    <div class="gauge-container">
-                                        <svg viewBox="0 0 200 200" class="w-full h-full transform -rotate-90">
-                                            <circle cx="100" cy="100" r="85" class="gauge-bg" stroke-dasharray="534" stroke-dashoffset="133.5"/>
-                                            <circle cx="100" cy="100" r="85" class="gauge-fill stroke-cyan-500" id="gauge-limpeza" stroke-dasharray="534" stroke-dashoffset="534" data-value="0"/>
-                                        </svg>
-                                        <div class="gauge-value">
-                                            <span class="text-2xl font-bold text-white data-value" id="value-limpeza">--</span>
-                                            <span class="text-[10px] text-slate-400 block mt-1">%</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mb-4">
-                                    <div class="flex justify-between items-center mb-2">
-                                        <span class="text-xs text-slate-400">Últimos valores</span>
-                                    </div>
-                                    <div class="grid grid-cols-3 gap-2 text-center">
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val1-limpeza">--</div>
-                                            <div class="text-[10px] text-slate-400">Pendente</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val2-limpeza">--</div>
-                                            <div class="text-[10px] text-slate-400">Andam.</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val3-limpeza">--</div>
-                                            <div class="text-[10px] text-slate-400">Concl.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 5. FISCAL -->
-                            <div class="metric-card rounded-2xl p-5 border-t-4 border-mining-accent" id="card-senf">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 rounded-xl bg-mining-accent/10 flex items-center justify-center">
-                                            <i class="ph ph-receipt text-2xl text-mining-accent"></i>
-                                        </div>
-                                        <div>
-                                            <h3 class="text-white font-bold text-lg">Fiscal</h3>
-                                            <p class="text-xs text-mining-accent">Espelho SENF</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-col items-end gap-1">
-                                        <span class="sensor-status offline" id="status-senf">OFFLINE</span>
-                                        <span class="last-update" id="update-senf">--:--:--</span>
-                                    </div>
-                                </div>
-
-                                <div class="flex justify-center mb-4">
-                                    <div class="gauge-container">
-                                        <svg viewBox="0 0 200 200" class="w-full h-full transform -rotate-90">
-                                            <circle cx="100" cy="100" r="85" class="gauge-bg" stroke-dasharray="534" stroke-dashoffset="133.5"/>
-                                            <circle cx="100" cy="100" r="85" class="gauge-fill stroke-mining-accent" id="gauge-senf" stroke-dasharray="534" stroke-dashoffset="534" data-value="0"/>
-                                        </svg>
-                                        <div class="gauge-value">
-                                            <span class="text-2xl font-bold text-white data-value" id="value-senf">--</span>
-                                            <span class="text-[10px] text-slate-400 block mt-1">%</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mb-4">
-                                    <div class="flex justify-between items-center mb-2">
-                                        <span class="text-xs text-slate-400">Últimos valores</span>
-                                    </div>
-                                    <div class="grid grid-cols-3 gap-2 text-center">
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val1-senf">--</div>
-                                            <div class="text-[10px] text-slate-400">Viagens</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val2-senf">--</div>
-                                            <div class="text-[10px] text-slate-400">Saída kg</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val3-senf">--</div>
-                                            <div class="text-[10px] text-slate-400">Chegada kg</div>
-                                        </div>
-                                    </div>
-                                    <div class="mt-2 text-[11px] text-slate-400 text-center">
-                                        Diferença: <span id="diff-senf" class="text-white font-semibold">--</span> kg
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 6. QUALIDADE -->
-                            <div class="metric-card rounded-2xl p-5 border-t-4 border-pink-500" id="card-rqa">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 rounded-xl bg-pink-500/10 flex items-center justify-center">
-                                            <i class="ph ph-clipboard-text text-2xl text-pink-400"></i>
-                                        </div>
-                                        <div>
-                                            <h3 class="text-white font-bold text-lg">Qualidade</h3>
-                                            <p class="text-xs text-pink-400">RQA Unificada</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-col items-end gap-1">
-                                        <span class="sensor-status offline" id="status-rqa">OFFLINE</span>
-                                        <span class="last-update" id="update-rqa">--:--:--</span>
-                                    </div>
-                                </div>
-
-                                <div class="flex justify-center mb-4">
-                                    <div class="gauge-container">
-                                        <svg viewBox="0 0 200 200" class="w-full h-full transform -rotate-90">
-                                            <circle cx="100" cy="100" r="85" class="gauge-bg" stroke-dasharray="534" stroke-dashoffset="133.5"/>
-                                            <circle cx="100" cy="100" r="85" class="gauge-fill stroke-pink-500" id="gauge-rqa" stroke-dasharray="534" stroke-dashoffset="534" data-value="0"/>
-                                        </svg>
-                                        <div class="gauge-value">
-                                            <span class="text-2xl font-bold text-white data-value" id="value-rqa">--</span>
-                                            <span class="text-[10px] text-slate-400 block mt-1">%</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mb-4">
-                                    <div class="flex justify-between items-center mb-2">
-                                        <span class="text-xs text-slate-400">Últimos valores</span>
-                                    </div>
-                                    <div class="grid grid-cols-3 gap-2 text-center">
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val1-rqa">--</div>
-                                            <div class="text-[10px] text-slate-400">Total</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val2-rqa">--</div>
-                                            <div class="text-[10px] text-slate-400">Abertas</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val3-rqa">--</div>
-                                            <div class="text-[10px] text-slate-400">Tratadas</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 7. CORREIAS -->
-                            <div class="metric-card rounded-2xl p-5 border-t-4 border-indigo-500" id="card-correia">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                                            <i class="ph ph-qr-code text-2xl text-indigo-400"></i>
-                                        </div>
-                                        <div>
-                                            <h3 class="text-white font-bold text-lg">Correias</h3>
-                                            <p class="text-xs text-indigo-400">QR Code Gestão</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-col items-end gap-1">
-                                        <span class="sensor-status offline" id="status-correia">OFFLINE</span>
-                                        <span class="last-update" id="update-correia">--:--:--</span>
-                                    </div>
-                                </div>
-
-                                <div class="flex justify-center mb-4">
-                                    <div class="gauge-container">
-                                        <svg viewBox="0 0 200 200" class="w-full h-full transform -rotate-90">
-                                            <circle cx="100" cy="100" r="85" class="gauge-bg" stroke-dasharray="534" stroke-dashoffset="133.5"/>
-                                            <circle cx="100" cy="100" r="85" class="gauge-fill stroke-indigo-500" id="gauge-correia" stroke-dasharray="534" stroke-dashoffset="534" data-value="0"/>
-                                        </svg>
-                                        <div class="gauge-value">
-                                            <span class="text-2xl font-bold text-white data-value" id="value-correia">--</span>
-                                            <span class="text-[10px] text-slate-400 block mt-1">%</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mb-4">
-                                    <div class="flex justify-between items-center mb-2">
-                                        <span class="text-xs text-slate-400">Últimos valores</span>
-                                    </div>
-                                    <div class="grid grid-cols-3 gap-2 text-center">
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val1-correia">--</div>
-                                            <div class="text-[10px] text-slate-400">Total</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val2-correia">--</div>
-                                            <div class="text-[10px] text-slate-400">Críticas</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val3-correia">--</div>
-                                            <div class="text-[10px] text-slate-400">Normais</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 8. INFRAESTRUTURA -->
-                            <div class="metric-card rounded-2xl p-5 border-t-4 border-teal-500" id="card-infra">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center">
-                                            <i class="ph ph-wrench text-2xl text-teal-400"></i>
-                                        </div>
-                                        <div>
-                                            <h3 class="text-white font-bold text-lg">Infraestrutura</h3>
-                                            <p class="text-xs text-teal-400">Frota e Atividades</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-col items-end gap-1">
-                                        <span class="sensor-status offline" id="status-infra">OFFLINE</span>
-                                        <span class="last-update" id="update-infra">--:--:--</span>
-                                    </div>
-                                </div>
-
-                                <div class="flex justify-center mb-4">
-                                    <div class="gauge-container">
-                                        <svg viewBox="0 0 200 200" class="w-full h-full transform -rotate-90">
-                                            <circle cx="100" cy="100" r="85" class="gauge-bg" stroke-dasharray="534" stroke-dashoffset="133.5"/>
-                                            <circle cx="100" cy="100" r="85" class="gauge-fill stroke-teal-500" id="gauge-infra" stroke-dasharray="534" stroke-dashoffset="534" data-value="0"/>
-                                        </svg>
-                                        <div class="gauge-value">
-                                            <span class="text-2xl font-bold text-white data-value" id="value-infra">--</span>
-                                            <span class="text-[10px] text-slate-400 block mt-1">%</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mb-4">
-                                    <div class="flex justify-between items-center mb-2">
-                                        <span class="text-xs text-slate-400">Últimos valores</span>
-                                    </div>
-                                    <div class="grid grid-cols-3 gap-2 text-center">
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val1-infra">--</div>
-                                            <div class="text-[10px] text-slate-400">Total</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val2-infra">--</div>
-                                            <div class="text-[10px] text-slate-400">Concl.</div>
-                                        </div>
-                                        <div class="bg-mining-800/50 rounded p-2">
-                                            <div class="text-lg font-bold text-white data-value" id="val3-infra">--</div>
-                                            <div class="text-[10px] text-slate-400">Pend.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-
-                        <!-- Alertas -->
-                        <div class="mt-6 glass-panel rounded-2xl p-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                                    <i class="ph ph-warning-circle text-mining-accent"></i>
-                                    Status dos Sensores
-                                </h3>
-                                <span class="text-xs text-slate-400" id="system-status">Aguardando dados...</span>
-                            </div>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="sensors-status-grid">
-                                <!-- Preenchido via JS -->
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <!-- Iframe View -->
-                <div id="iframe-view" class="absolute inset-0 hidden">
-                    <div class="iframe-container">
-                        <iframe id="app-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-top-navigation"></iframe>
-                    </div>
-                </div>
-
-            </div>
-        </main>
+          </div>
+          <div class="table-container">
+            <table class="table table-sm table-hover align-middle">
+              <thead><tr id="manutencaoHead"></tr></thead>
+              <tbody id="manutencaoBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="col-12 col-xl-7">
+          <div class="row g-3">
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-bar"></i> Distribuição por Área</h6><div style="height: 240px"><canvas id="mpByArea"></canvas></div></div></div>
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-line"></i> Linha do Tempo</h6><div style="height: 240px"><canvas id="mpTimeline"></canvas></div></div></div>
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-column"></i> Análise de Pareto por Tag</h6><div style="height: 280px"><canvas id="mpPareto"></canvas></div></div></div>
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-pie"></i> Status das Atividades</h6><div style="height: 240px"><canvas id="mpStatus"></canvas></div></div></div>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
+  <!-- Manutenção Corretiva Tab -->
+  <div id="tab-corretiva" class="tab-content" style="display:none">
+    <div class="app-card p-4">
+      <div class="controls-section">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="chip"><i class="fa-regular fa-file-excel"></i> Planilhas (Corretiva)</span>
+            <label class="btn btn-sm btn-primary mb-0" style="background: var(--brand); border-color: var(--brand);"><i class="fa-solid fa-file-arrow-up"></i> Importar Excel<input id="inputMC" type="file" accept=".xlsx,.xls" hidden multiple/></label>
+            <button id="btnMCCSV" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-file-export"></i> Exportar CSV</button>
+            <button id="btnMCExportPNG" class="btn btn-sm btn-outline-info"><i class="fa-solid fa-image"></i> Exportar PNG</button>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button id="btnMcDeleteSel" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i> Excluir Selecionados</button>
+            <button id="btnMcDeleteAll" class="btn btn-sm btn-danger"><i class="fa-regular fa-trash-can"></i> Excluir Tudo</button>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-3 mb-4">
+        <div class="kpi"><div class="label">Total de Registros</div><div id="kpiMcCount" class="value">0</div></div>
+        <div class="kpi"><div class="label">Áreas Distintas</div><div id="kpiMcAreas" class="value">0</div></div>
+        <div class="kpi"><div class="label">Tags Distintas</div><div id="kpiMcTags" class="value">0</div></div>
+        <div class="kpi"><div class="label">% Realizado</div><div id="kpiMcRate" class="value">0%</div></div>
+        <div class="kpi"><div class="label">Realizados</div><div id="kpiMcDone" class="value" style="color: var(--success);">0</div></div>
+        <div class="kpi"><div class="label">Pendentes</div><div id="kpiMcPending" class="value" style="color: var(--warning);">0</div></div>
+        <div class="kpi"><div class="label">Não Realizados</div><div id="kpiMcNotDone" class="value" style="color: var(--danger);">0</div></div>
+      </div>
+      <div class="row g-4">
+        <div class="col-12 col-xl-5">
+          <div class="filter-section mb-3">
+            <h6 class="chart-title mb-3"><i class="fa-solid fa-filter"></i> Filtros</h6>
+            <div class="row g-2">
+              <div class="col-6"><label class="form-label">Data (início)</label><input id="mcDateStart" type="date" class="form-control form-control-sm"></div>
+              <div class="col-6"><label class="form-label">Data (fim)</label><input id="mcDateEnd" type="date" class="form-control form-control-sm"></div>
+              <div class="col-4"><label class="form-label">Área</label><select id="mcArea" class="form-select form-select-sm"><option value="">Todas</option></select></div>
+              <div class="col-4"><label class="form-label">Tag</label><select id="mcTag" class="form-select form-select-sm"><option value="">Todas</option></select></div>
+              <div class="col-4"><label class="form-label">Situação</label><select id="mcSituacao" class="form-select form-select-sm"><option value="">Todas</option><option>REALIZADO</option><option>NÃO REALIZADO</option><option>PENDENTE</option></select></div>
+              <div class="col-12 d-flex gap-2 mt-3">
+                <button id="mcClear" class="btn btn-sm btn-secondary flex-grow-1"><i class="fa-solid fa-rotate"></i> Limpar Filtros</button>
+                <button id="mcRefresh" class="btn btn-sm btn-primary flex-grow-1" style="background: var(--brand); border-color: var(--brand);"><i class="fa-solid fa-filter"></i> Aplicar Filtros</button>
+              </div>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="table table-sm table-hover align-middle">
+              <thead><tr id="corretivaHead"></tr></thead>
+              <tbody id="corretivaBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="col-12 col-xl-7">
+          <div class="row g-3">
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-bar"></i> Distribuição por Área</h6><div style="height: 240px"><canvas id="mcByArea"></canvas></div></div></div>
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-line"></i> Linha do Tempo</h6><div style="height: 240px"><canvas id="mcTimeline"></canvas></div></div></div>
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-column"></i> Análise de Pareto por Tag</h6><div style="height: 280px"><canvas id="mcPareto"></canvas></div></div></div>
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-pie"></i> Status das Atividades</h6><div style="height: 240px"><canvas id="mcStatus"></canvas></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <script>
-        // ==========================================
-        // CONFIGURAÇÃO FIREBASE
-        // ==========================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyDneReMjO78JqJ-LvmSTiQqUMkxT97H6JE",
-            authDomain: "naza-auditoria-hub.firebaseapp.com",
-            databaseURL: "https://naza-auditoria-hub-default-rtdb.firebaseio.com",
-            projectId: "naza-auditoria-hub",
-            storageBucket: "naza-auditoria-hub.firebasestorage.app",
-            messagingSenderId: "1014107842497",
-            appId: "1:1014107842497:web:3338a5438f018df972f140"
-        };
+  <!-- Manutenção Reprogramada Tab -->
+  <div id="tab-reprogramada" class="tab-content" style="display:none">
+    <div class="app-card p-4">
+      <div class="controls-section">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="chip"><i class="fa-regular fa-file-excel"></i> Planilhas (Reprogramada)</span>
+            <label class="btn btn-sm btn-primary mb-0" style="background: var(--brand); border-color: var(--brand);"><i class="fa-solid fa-file-arrow-up"></i> Importar Excel<input id="inputMR" type="file" accept=".xlsx,.xls" hidden multiple/></label>
+            <button id="btnMRCSV" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-file-export"></i> Exportar CSV</button>
+            <button id="btnMRExportPNG" class="btn btn-sm btn-outline-info"><i class="fa-solid fa-image"></i> Exportar PNG</button>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button id="btnMrDeleteSel" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i> Excluir Selecionados</button>
+            <button id="btnMrDeleteAll" class="btn btn-sm btn-danger"><i class="fa-regular fa-trash-can"></i> Excluir Tudo</button>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-3 mb-4">
+        <div class="kpi"><div class="label">Total de Registros</div><div id="kpiMrCount" class="value">0</div></div>
+        <div class="kpi"><div class="label">Áreas Distintas</div><div id="kpiMrAreas" class="value">0</div></div>
+        <div class="kpi"><div class="label">Tags Distintas</div><div id="kpiMrTags" class="value">0</div></div>
+        <div class="kpi"><div class="label">% Realizado</div><div id="kpiMrRate" class="value">0%</div></div>
+        <div class="kpi"><div class="label">Realizados</div><div id="kpiMrDone" class="value" style="color: var(--success);">0</div></div>
+        <div class="kpi"><div class="label">Pendentes</div><div id="kpiMrPending" class="value" style="color: var(--warning);">0</div></div>
+        <div class="kpi"><div class="label">Reprogramados</div><div id="kpiMrReprogramado" class="value" style="color: #3730a3;">0</div></div>
+      </div>
+      <div class="row g-4">
+        <div class="col-12 col-xl-5">
+          <div class="filter-section mb-3">
+            <h6 class="chart-title mb-3"><i class="fa-solid fa-filter"></i> Filtros</h6>
+            <div class="row g-2">
+              <div class="col-6"><label class="form-label">Data (início)</label><input id="mrDateStart" type="date" class="form-control form-control-sm"></div>
+              <div class="col-6"><label class="form-label">Data (fim)</label><input id="mrDateEnd" type="date" class="form-control form-control-sm"></div>
+              <div class="col-4"><label class="form-label">Área</label><select id="mrArea" class="form-select form-select-sm"><option value="">Todas</option></select></div>
+              <div class="col-4"><label class="form-label">Tag</label><select id="mrTag" class="form-select form-select-sm"><option value="">Todas</option></select></div>
+              <div class="col-4"><label class="form-label">Situação</label><select id="mrSituacao" class="form-select form-select-sm"><option value="">Todas</option><option>REPROGRAMADO</option></select></div>
+              <div class="col-12 d-flex gap-2 mt-3">
+                <button id="mrClear" class="btn btn-sm btn-secondary flex-grow-1"><i class="fa-solid fa-rotate"></i> Limpar Filtros</button>
+                <button id="mrRefresh" class="btn btn-sm btn-primary flex-grow-1" style="background: var(--brand); border-color: var(--brand);"><i class="fa-solid fa-filter"></i> Aplicar Filtros</button>
+              </div>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="table table-sm table-hover align-middle">
+              <thead><tr id="reprogramadaHead"></tr></thead>
+              <tbody id="reprogramadaBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="col-12 col-xl-7">
+          <div class="row g-3">
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-bar"></i> Distribuição por Área</h6><div style="height: 240px"><canvas id="mrByArea"></canvas></div></div></div>
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-line"></i> Linha do Tempo</h6><div style="height: 240px"><canvas id="mrTimeline"></canvas></div></div></div>
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-column"></i> Análise de Pareto por Tag</h6><div style="height: 280px"><canvas id="mrPareto"></canvas></div></div></div>
+            <div class="col-12"><div class="chart-container"><h6 class="chart-title"><i class="fa-solid fa-chart-pie"></i> Status das Atividades</h6><div style="height: 240px"><canvas id="mrStatus"></canvas></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-        const appFb = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const database = firebase.database();
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
-        // ==========================================
-        // CONFIGURAÇÃO DOS SENSORES
-        // ==========================================
-        const sensors = {
-            controle: { name: 'Sala de Controle', color: '#3b82f6', icon: 'ph-control' },
-            auditoria: { name: 'Auditoria', color: '#8b5cf6', icon: 'ph-shield-check' },
-            producao: { name: 'Dashboard OMs', color: '#10b981', icon: 'ph-chart-line-up' },
-            limpeza: { name: 'Limpeza', color: '#06b6d4', icon: 'ph-broom' },
-            senf: { name: 'Fiscal', color: '#f59e0b', icon: 'ph-receipt' },
-            rqa: { name: 'Qualidade', color: '#ec4899', icon: 'ph-clipboard-text' },
-            correia: { name: 'Correias', color: '#6366f1', icon: 'ph-qr-code' },
-            infra: { name: 'Infraestrutura', color: '#14b8a6', icon: 'ph-wrench' }
-        };
+<!-- Firebase (APENAS REALTIME DATABASE) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
-        const apps = [
-            { id: "controle", group: "Operação", name: "Sala de Controle — RDO + Comparador", url: "https://nazarenowc-star.github.io/Rdo-Sync_Naza-Audit/", short: "SC", mode: "iframe", icon: "ph-control" },
-            { id: "auditoria", group: "Auditoria", name: "Auditoria de Logs", url: "https://nazarenowc-star.github.io/naza-auditoria/", short: "LOG", mode: "iframe", icon: "ph-shield-check" },
-            { id: "dashboard", group: "Produção", name: "Dashboard OMs", url: "https://nazarenowc-star.github.io/dashboard-samarco-web/", short: "DB", mode: "iframe", icon: "ph-chart-line-up" },
-            { id: "limpeza", group: "Operação", name: "Limpeza Industrial", url: "https://nazarenowc-star.github.io/limpeza-c745c/", short: "LIM", mode: "iframe", icon: "ph-broom" },
-            { id: "senf", group: "Fiscal", name: "Espelho SENF", url: "https://nazarenowc-star.github.io/espelho-senf/", short: "NF", mode: "iframe", icon: "ph-receipt" },
-            { id: "rqa", group: "Qualidade", name: "RQA Unificada", url: "https://nazarenowc-star.github.io/rqa-unificada/", short: "RQA", mode: "iframe", icon: "ph-clipboard-text" },
-            { id: "correia", group: "Manutenção", name: "QR Code Correia", url: "https://nazarenowc-star.github.io/QRCOD-CORREIA-Naza-Audit/", short: "QR", mode: "iframe", icon: "ph-qr-code" },
-            { id: "infra", group: "Infraestrutura", name: "Atividades Infra", url: "https://nazarenowc-star.github.io/Atividades-Infra---Naza-Auditoria/", short: "INF", mode: "iframe", icon: "ph-wrench" }
-        ];
+<script>
+// ==================== CONFIGURAÇÃO FIREBASE (PROJETO HUB) ====================
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDneReMjO78JqJ-LvmSTiQqUMkxT97H6JE",
+  authDomain: "naza-auditoria-hub.firebaseapp.com",
+  databaseURL: "https://naza-auditoria-hub-default-rtdb.firebaseio.com",
+  projectId: "naza-auditoria-hub",
+  storageBucket: "naza-auditoria-hub.firebasestorage.app",
+  messagingSenderId: "1014107842497",
+  appId: "1:1014107842497:web:3338a5438f018df972f140"
+};
 
-        let currentApp = null;
-        let sensorListeners = {};
+// ==================== VARIÁVEIS GLOBAIS ====================
+let firebaseApp = null;
+let database = null;
+let firebaseInitialized = false;
 
-        // ==========================================
-        // AUTENTICAÇÃO
-        // ==========================================
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                showMainApp(user);
-            } else {
-                showLogin();
-            }
-        });
+function initFirebase() {
+  if (firebaseInitialized) return true;
+  
+  try {
+    if (!firebase.apps.length) {
+      firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+    } else {
+      firebaseApp = firebase.app();
+    }
+    database = firebase.database();
+    firebaseInitialized = true;
+    console.log('✅ Firebase Realtime Database conectado');
+    updateConnectionStatus(true);
+    return true;
+  } catch (error) {
+    console.error('❌ Erro ao inicializar Firebase:', error);
+    updateConnectionStatus(false);
+    return false;
+  }
+}
 
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('login-btn');
-            btn.disabled = true;
-            btn.innerHTML = '<div class="loading-spinner w-5 h-5 border-2"></div><span>Entrando...</span>';
-            
-            try {
-                await auth.signInWithEmailAndPassword(
-                    document.getElementById('email').value,
-                    document.getElementById('password').value
-                );
-            } catch (error) {
-                document.getElementById('login-error').textContent = error.message;
-                document.getElementById('login-error').classList.remove('hidden');
-                btn.disabled = false;
-                btn.innerHTML = '<span>Entrar no Sistema</span><i class="ph ph-arrow-right"></i>';
-            }
-        });
+function updateConnectionStatus(online) {
+  const statusEl = document.getElementById('connectionStatus');
+  const statusText = document.getElementById('statusText');
+  if (statusEl && statusText) {
+    if (online) {
+      statusEl.className = 'status-indicator status-online';
+      statusText.textContent = 'Online';
+    } else {
+      statusEl.className = 'status-indicator status-offline';
+      statusText.textContent = 'Offline';
+    }
+  }
+}
 
-        function showLogin() {
-            document.getElementById('login-screen').classList.remove('hidden');
-            document.getElementById('main-app').classList.add('hidden');
+// ==================== CONFIGURAÇÃO DA APLICAÇÃO ====================
+const CONFIG = {
+  STORAGE_KEYS: {
+    PREVENTIVA: 'samarco_prev_data',
+    MANUTENCAO: 'samarco_mp_data',
+    CORRETIVA: 'samarco_mc_data',
+    REPROGRAMADA: 'samarco_mr_data'
+  },
+  COLUMN_MAPPING: {
+    DATA: ['DATA', 'Data', 'data', 'DT'],
+    AREA: ['ÁREA', 'AREA', 'Area', 'Setor', 'LOCAL', 'Local', 'Mina', 'MINA'],
+    TAG: ['TAG', 'Tag', 'Equipamento', 'EQUIP', 'EQUIPAMENTO'],
+    ESPECIFICACAO: ['ESPECIFICAÇÃO', 'Especificação', 'Especificacao', 'ESPECIFICACAO', 'SERVIÇO', 'SERVICO', 'ATIVIDADE'],
+    SITUACAO: ['SITUAÇÃO', 'SITUACAO', 'Situação', 'Status', 'STATUS'],
+    SEMANA: ['SEMANA', 'Semana', 'SEMANA DO MÊS', 'SEMANA DO MES'],
+    OM: ['OM', 'Nº OM', 'ORDEM', 'ORDEM DE MANUTENÇÃO', 'ORDEM MANUTENÇÃO', 'N° OM'],
+    MES: ['MÊS', 'MES', 'Mês', 'Mes'],
+    DIA: ['DIA', 'Dia'],
+    DURACAO: ['DURAÇÃO', 'DURACAO', 'Duração'],
+    RESPONSAVEL: ['RESPONSÁVEL', 'RESPONSAVEL', 'Responsável'],
+    OBSERVACAO: ['OBSERVAÇÃO', 'OBSERVACAO', 'Observação', 'OBS']
+  },
+  COLORS: {
+    brand: '#004c97',
+    accent: '#1aa06d',
+    success: '#10b981',
+    warning: '#f59e0b',
+    danger: '#ef4444',
+    reprogramado: '#3730a3',
+    chartColors: [
+      '#004c97', '#1aa06d', '#f59e0b', '#ef4444', '#8b5cf6',
+      '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
+    ]
+  }
+};
+
+// ==================== ESTADO DA APLICAÇÃO ====================
+let appState = {
+  preventiva: { data: [], filtered: [], charts: {} },
+  manutencao: { data: [], filtered: [], charts: {} },
+  corretiva:  { data: [], filtered: [], charts: {} },
+  reprogramada: { data: [], filtered: [], charts: {} },
+  currentTab: 'preventiva'
+};
+
+// ==================== SISTEMA DE SINCRONIZAÇÃO ====================
+const RealtimeSync = {
+  enabled: false,
+  listeners: {},
+  saveTimers: {},
+  
+  init() {
+    if (!firebaseInitialized) {
+      initFirebase();
+    }
+    this.enabled = firebaseInitialized && database !== null;
+    
+    if (this.enabled) {
+      this.subscribeAll();
+    }
+    return this.enabled;
+  },
+
+  getRef(type) {
+    if (!database) return null;
+    return database.ref('dashboards/samarco/' + type);
+  },
+
+  subscribeAll() {
+    if (!this.enabled || !database) return;
+    ['preventiva', 'manutencao', 'corretiva', 'reprogramada'].forEach(type => {
+      this.subscribeType(type);
+    });
+  },
+
+  subscribeType(type) {
+    if (!this.enabled || !database || this.listeners[type]) return;
+
+    const ref = this.getRef(type);
+    if (!ref) return;
+    
+    this.listeners[type] = ref.on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+      
+      const items = Array.isArray(data.items) ? data.items : [];
+      if (items.length) {
+        console.log(`📥 Dados recebidos para ${type}:`, items.length);
+        this.applyRemoteData(type, items);
+      }
+    }, (error) => {
+      console.error(`Erro ao sincronizar ${type}:`, error);
+      updateConnectionStatus(false);
+    });
+  },
+
+  applyRemoteData(type, items) {
+    const parsedItems = items.map(item => ({
+      ...item,
+      DATA: item.DATA ? new Date(item.DATA) : null
+    }));
+    
+    appState[type].data = parsedItems;
+    appState[type].filtered = [...parsedItems];
+
+    if (window.UI) {
+      UI.updateFilters(type);
+      UI.updateTable(type);
+      UI.updateKPIs(type);
+      UI.updateCharts(type);
+    }
+
+    localStorage.setItem(CONFIG.STORAGE_KEYS[type.toUpperCase()], JSON.stringify(parsedItems));
+  },
+
+  queueSave(type, delay = 700) {
+    if (!this.enabled || !database) return;
+    clearTimeout(this.saveTimers[type]);
+    this.saveTimers[type] = setTimeout(() => {
+      this.saveType(type);
+    }, delay);
+  },
+
+  saveType(type) {
+    if (!this.enabled || !database) return;
+
+    const items = appState[type].data.map(item => ({
+      ...item,
+      DATA: item.DATA ? item.DATA.toISOString() : null,
+      _updatedAt: Date.now()
+    }));
+
+    const ref = this.getRef(type);
+    if (!ref) return;
+    
+    const payload = {
+      items,
+      count: items.length,
+      type,
+      source: 'dashboard-samarco-web',
+      updatedAt: new Date().toISOString(),
+      lastUpdate: Date.now()
+    };
+
+    ref.set(payload)
+      .then(() => {
+        console.log(`💾 Dados de ${type} salvos no Realtime (${items.length})`);
+        updateConnectionStatus(true);
+        sendSensorData(type, items);
+      })
+      .catch(error => {
+        console.error(`Erro ao salvar ${type}:`, error);
+        updateConnectionStatus(false);
+      });
+  },
+
+  forceSync(type) {
+    return this.saveType(type);
+  }
+};
+
+// ==================== SENSOR PARA O CARD UNIFICADOR ====================
+function sendSensorData(type, items) {
+  if (!database) return;
+
+  const total = items.length;
+  const realizados = items.filter(i => i.SITUACAO === 'REALIZADO').length;
+  const pendentes = total - realizados;
+  
+  const sensorData = {
+    sistema: 'dash_samarco_' + type,
+    valores: [total, realizados, pendentes],
+    dadosCompletos: {
+      total,
+      realizados,
+      pendentes,
+      tipo: type
+    },
+    timestamp: Date.now()
+  };
+
+  database.ref('sensores/dash_samarco_' + type).set(sensorData)
+    .catch(err => console.warn('Erro ao enviar sensor:', err));
+}
+
+// ==================== UTILITÁRIOS ====================
+const Utils = {
+  showLoading() { document.getElementById('loading').classList.add('show'); },
+  hideLoading() { document.getElementById('loading').classList.remove('show'); },
+  showAlert(message) { alert(message); },
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  },
+  norm(str) { 
+    return (str ?? '')
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase(); 
+  },
+  toDate(value) {
+    if (!value && value !== 0) return null;
+    if (value instanceof Date) return value;
+    
+    if (typeof value === 'number') {
+      const epoch = new Date(Date.UTC(1899, 11, 30));
+      return new Date(epoch.getTime() + value * 86400 * 1000);
+    }
+    
+    const str = String(value).trim();
+    if (!str) return null;
+    
+    let match = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+    }
+    
+    match = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (match) {
+      const day = parseInt(match[1]);
+      const month = parseInt(match[2]) - 1;
+      const year = parseInt(match[3].length === 2 ? ('20' + match[3]) : match[3]);
+      return new Date(year, month, day);
+    }
+    
+    const date = new Date(str);
+    return isNaN(date.getTime()) ? null : date;
+  },
+  formatDate(date) { 
+    if (!date) return ''; 
+    const d = new Date(date); 
+    return String(d.getDate()).padStart(2, '0') + '/' +
+           String(d.getMonth() + 1).padStart(2, '0') + '/' +
+           d.getFullYear(); 
+  },
+  getColumnValue(row, names) { 
+    for (const name of names) { 
+      if (row[name] !== undefined && row[name] !== null && row[name] !== '') {
+        return row[name];
+      } 
+    } 
+    return ''; 
+  },
+  unique(arr) { return [...new Set(arr.filter(Boolean))]; },
+  downloadCSV(filename, rows) {
+    if (!rows.length) { Utils.showAlert("Nenhum dado para exportar"); return; }
+    const headers = Utils.unique(rows.flatMap(r => Object.keys(r)));
+    const escape = s => (/[";,\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s);
+    const lines = [headers.join(',')];
+    for (const row of rows) { lines.push(headers.map(h => escape(String(row[h] ?? ''))).join(',')); }
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); 
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+};
+
+// ==================== GERENCIADOR DE DADOS ====================
+const DataManager = {
+  async processFiles(files, type) {
+    const allRows = [];
+    for (const file of files) {
+      try {
+        const buffer = await file.arrayBuffer();
+        const rows = await this.processExcel(buffer, type);
+        const enriched = rows.map(r => ({...r, _sourceFile: file.name, _importDate: new Date().toISOString()}));
+        allRows.push(...enriched);
+      } catch(err) { 
+        console.error(err); 
+        Utils.showAlert('Erro no arquivo ' + file.name + ': ' + err.message); 
+      }
+    }
+    return allRows;
+  },
+  
+  async processExcel(arrayBuffer, type) {
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    const sheetNames = workbook.SheetNames;
+    const namesLower = sheetNames.map(n => ({ name: n, norm: n.toLowerCase() }));
+    const programacaoSheet = namesLower.find(o => o.norm.includes('programa') && !o.norm.includes('painel'));
+    const sheetName = programacaoSheet ? programacaoSheet.name : sheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const arrayOfArrays = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true, defval: '' });
+    let headerRow = 0;
+    const wanted = ['DATA', 'ÁREA', 'AREA', 'TAG', 'ESPECIFICAÇÃO', 'ESPECIFICACAO', 'SITUAÇÃO', 'SITUACAO', 'OM'];
+    for (let i = 0; i < Math.min(arrayOfArrays.length, 20); i++) {
+      const row = arrayOfArrays[i].map(c => Utils.norm(c));
+      const hits = wanted.filter(w => row.includes(Utils.norm(w))).length;
+      if (hits >= 3) { headerRow = i; break; }
+    }
+    let headers = arrayOfArrays[headerRow].map(h => typeof h === 'string' ? h : String(h));
+    headers = headers.map((h, i) => h && String(h).trim() ? String(h).trim() : ('COL_' + (i + 1)));
+    const seen = {}; 
+    headers = headers.map(h => {
+      let key = h;
+      while (seen[key]) { key = key + '_dup'; }
+      seen[key] = 1;
+      return key;
+    });
+    const data = [];
+    for (let r = headerRow + 1; r < arrayOfArrays.length; r++) {
+      const line = arrayOfArrays[r]; 
+      if (!line || line.every(v => String(v).trim() === '')) continue;
+      const obj = {}; 
+      for (let c = 0; c < headers.length; c++) { obj[headers[c]] = line[c] ?? ''; }
+      const dataValue = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.DATA);
+      obj.DATA = Utils.toDate(dataValue);
+      obj.AREA = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.AREA);
+      obj.TAG = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.TAG);
+      obj.ESPECIFICACAO = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.ESPECIFICACAO);
+      obj.SITUACAO = Utils.norm(Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.SITUACAO));
+      obj.SEMANA = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.SEMANA);
+      obj.OM = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.OM);
+      obj.MES = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.MES);
+      obj.DIA = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.DIA);
+      obj.DURACAO = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.DURACAO);
+      obj.RESPONSAVEL = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.RESPONSAVEL);
+      obj.OBSERVACAO = Utils.getColumnValue(obj, CONFIG.COLUMN_MAPPING.OBSERVACAO);
+      obj._id = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      data.push(obj);
+    }
+    return data;
+  },
+  
+  save(type) { 
+    const key = CONFIG.STORAGE_KEYS[type.toUpperCase()]; 
+    localStorage.setItem(key, JSON.stringify(appState[type].data)); 
+    RealtimeSync.queueSave(type);
+  },
+  
+  load(type) {
+    try {
+      const key = CONFIG.STORAGE_KEYS[type.toUpperCase()];
+      const data = JSON.parse(localStorage.getItem(key) || '[]');
+      appState[type].data = data.map(r => ({...r, DATA: r.DATA ? new Date(r.DATA) : null }));
+      appState[type].filtered = [...appState[type].data];
+    } catch { 
+      appState[type].data = []; 
+      appState[type].filtered = []; 
+    }
+  },
+  
+  backup() {
+    const payload = {
+      preventiva: appState.preventiva.data,
+      manutencao: appState.manutencao.data,
+      corretiva:  appState.corretiva.data,
+      reprogramada: appState.reprogramada.data,
+      timestamp: new Date().toISOString(),
+      version: '4.0'
+    };
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    const a = document.createElement('a'); 
+    a.href = URL.createObjectURL(blob);
+    a.download = 'samarco_backup_' + new Date().toISOString().split('T')[0] + '.json'; 
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  },
+  
+  async restore(file) {
+    if (!file) return;
+    try {
+      const text = await file.text(); 
+      const data = JSON.parse(text);
+      if (Array.isArray(data.preventiva)) appState.preventiva.data = data.preventiva;
+      if (Array.isArray(data.manutencao)) appState.manutencao.data = data.manutencao;
+      if (Array.isArray(data.corretiva))  appState.corretiva.data  = data.corretiva;
+      if (Array.isArray(data.reprogramada))  appState.reprogramada.data  = data.reprogramada;
+      this.save('preventiva'); 
+      this.save('manutencao'); 
+      this.save('corretiva');
+      this.save('reprogramada');
+      this.applyFilters('preventiva'); 
+      this.applyFilters('manutencao'); 
+      this.applyFilters('corretiva');
+      this.applyFilters('reprogramada');
+      Utils.showAlert('Backup restaurado com sucesso!');
+    } catch(e) { 
+      Utils.showAlert('Erro ao restaurar backup: ' + e.message); 
+    }
+  },
+  
+  applyFilters(type) {
+    const prefix = type === 'preventiva' ? 'prev' : (type === 'manutencao' ? 'mp' : (type === 'corretiva' ? 'mc' : 'mr'));
+    const dateStart = document.getElementById(prefix + 'DateStart')?.value;
+    const dateEnd   = document.getElementById(prefix + 'DateEnd')?.value;
+    const area      = document.getElementById(prefix + 'Area')?.value;
+    const tag       = document.getElementById(prefix + 'Tag')?.value;
+    const situacao  = document.getElementById(prefix + 'Situacao')?.value;
+    
+    let filtered = [...appState[type].data];
+    
+    if (dateStart) { 
+      const s = new Date(dateStart); 
+      filtered = filtered.filter(r => r.DATA && r.DATA >= s); 
+    }
+    if (dateEnd) { 
+      const e = new Date(dateEnd); 
+      filtered = filtered.filter(r => r.DATA && r.DATA <= e); 
+    }
+    if (area) { 
+      filtered = filtered.filter(r => r.AREA === area); 
+    }
+    if (tag) { 
+      filtered = filtered.filter(r => r.TAG === tag); 
+    }
+    if (situacao) { 
+      filtered = filtered.filter(r => r.SITUACAO === Utils.norm(situacao)); 
+    }
+    
+    appState[type].filtered = filtered;
+    UI.updateTable(type); 
+    UI.updateKPIs(type); 
+    UI.updateCharts(type);
+  },
+  
+  clearFilters(type) {
+    const prefix = type === 'preventiva' ? 'prev' : (type === 'manutencao' ? 'mp' : (type === 'corretiva' ? 'mc' : 'mr'));
+    const el1 = document.getElementById(prefix + 'DateStart'); if (el1) el1.value = '';
+    const el2 = document.getElementById(prefix + 'DateEnd'); if (el2) el2.value = '';
+    const el3 = document.getElementById(prefix + 'Area'); if (el3) el3.value = '';
+    const el4 = document.getElementById(prefix + 'Tag'); if (el4) el4.value = '';
+    const el5 = document.getElementById(prefix + 'Situacao'); if (el5) el5.value = '';
+    this.applyFilters(type);
+  },
+  
+  deleteSelected(type) {
+    const bodyId = (type === 'preventiva') ? 'preventivaBody' : 
+                   (type === 'manutencao') ? 'manutencaoBody' : 
+                   (type === 'corretiva') ? 'corretivaBody' : 
+                   'reprogramadaBody';
+    const body = document.getElementById(bodyId);
+    const checks = body ? Array.from(body.querySelectorAll('.rowChk')).filter(c => c.checked) : [];
+    if (!checks.length) { 
+      Utils.showAlert('Selecione ao menos um registro.'); 
+      return; 
+    }
+    if (!confirm(`Excluir ${checks.length} registro(s) selecionado(s)?`)) return;
+    const toRemove = new Set(checks.map(c => c.dataset.id));
+    appState[type].data = appState[type].data.filter(r => !toRemove.has(r._id));
+    this.save(type); 
+    this.applyFilters(type);
+    Utils.showAlert('Registros excluídos com sucesso!');
+  },
+  
+  deleteAll(type) {
+    if (!confirm('Excluir TODOS os registros desta aba? Esta ação não pode ser desfeita.')) return;
+    appState[type].data = []; 
+    this.save(type); 
+    this.applyFilters(type);
+    Utils.showAlert('Todos os registros foram excluídos!');
+  },
+  
+  export(type) {
+    const rows = appState[type].filtered;
+    if (!rows.length) { 
+      Utils.showAlert('Nenhum dado para exportar'); 
+      return; 
+    }
+    const filename = `${type}_${new Date().toISOString().split('T')[0]}.csv`;
+    Utils.downloadCSV(filename, rows);
+  }
+};
+
+// ==================== INTERFACE DO USUÁRIO ====================
+const UI = {
+  init() {
+    this.setupEventListeners();
+    DataManager.load('preventiva'); 
+    DataManager.load('manutencao'); 
+    DataManager.load('corretiva');
+    DataManager.load('reprogramada');
+    DataManager.applyFilters('preventiva'); 
+    DataManager.applyFilters('manutencao'); 
+    DataManager.applyFilters('corretiva');
+    DataManager.applyFilters('reprogramada');
+    
+    // Inicializa Firebase e sincronização
+    initFirebase();
+    RealtimeSync.init();
+  },
+  
+  setupEventListeners() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => this.switchTab(e.currentTarget.dataset.tab));
+    });
+
+    // Preventiva
+    const inputPrev = document.getElementById('inputPrev');
+    if (inputPrev) {
+      inputPrev.addEventListener('change', async (e) => {
+        if (!e.target.files.length) return; 
+        Utils.showLoading();
+        const newRows = await DataManager.processFiles(e.target.files, 'preventiva');
+        appState.preventiva.data.push(...newRows); 
+        DataManager.save('preventiva'); 
+        DataManager.applyFilters('preventiva');
+        e.target.value = ''; 
+        Utils.hideLoading(); 
+        Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
+      });
+    }
+    
+    const btnPrevCSV = document.getElementById('btnPrevCSV');
+    if (btnPrevCSV) btnPrevCSV.addEventListener('click', () => DataManager.export('preventiva'));
+    
+    const btnPrevDeleteSel = document.getElementById('btnPrevDeleteSel');
+    if (btnPrevDeleteSel) btnPrevDeleteSel.addEventListener('click', () => DataManager.deleteSelected('preventiva'));
+    
+    const btnPrevDeleteAll = document.getElementById('btnPrevDeleteAll');
+    if (btnPrevDeleteAll) btnPrevDeleteAll.addEventListener('click', () => DataManager.deleteAll('preventiva'));
+    
+    const prevRefresh = document.getElementById('prevRefresh');
+    if (prevRefresh) prevRefresh.addEventListener('click', () => DataManager.applyFilters('preventiva'));
+    
+    const prevClear = document.getElementById('prevClear');
+    if (prevClear) prevClear.addEventListener('click', () => DataManager.clearFilters('preventiva'));
+
+    // Manutenção Programada
+    const inputMP = document.getElementById('inputMP');
+    if (inputMP) {
+      inputMP.addEventListener('change', async (e) => {
+        if (!e.target.files.length) return; 
+        Utils.showLoading();
+        const newRows = await DataManager.processFiles(e.target.files, 'manutencao');
+        appState.manutencao.data.push(...newRows); 
+        DataManager.save('manutencao'); 
+        DataManager.applyFilters('manutencao');
+        e.target.value = ''; 
+        Utils.hideLoading(); 
+        Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
+      });
+    }
+    
+    const btnMPCSV = document.getElementById('btnMPCSV');
+    if (btnMPCSV) btnMPCSV.addEventListener('click', () => DataManager.export('manutencao'));
+    
+    const btnMpDeleteSel = document.getElementById('btnMpDeleteSel');
+    if (btnMpDeleteSel) btnMpDeleteSel.addEventListener('click', () => DataManager.deleteSelected('manutencao'));
+    
+    const btnMpDeleteAll = document.getElementById('btnMpDeleteAll');
+    if (btnMpDeleteAll) btnMpDeleteAll.addEventListener('click', () => DataManager.deleteAll('manutencao'));
+    
+    const mpRefresh = document.getElementById('mpRefresh');
+    if (mpRefresh) mpRefresh.addEventListener('click', () => DataManager.applyFilters('manutencao'));
+    
+    const mpClear = document.getElementById('mpClear');
+    if (mpClear) mpClear.addEventListener('click', () => DataManager.clearFilters('manutencao'));
+
+    // Manutenção Corretiva
+    const inputMC = document.getElementById('inputMC');
+    if (inputMC) {
+      inputMC.addEventListener('change', async (e) => {
+        if (!e.target.files.length) return; 
+        Utils.showLoading();
+        const newRows = await DataManager.processFiles(e.target.files, 'corretiva');
+        appState.corretiva.data.push(...newRows); 
+        DataManager.save('corretiva'); 
+        DataManager.applyFilters('corretiva');
+        e.target.value = ''; 
+        Utils.hideLoading(); 
+        Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
+      });
+    }
+    
+    const btnMCCSV = document.getElementById('btnMCCSV');
+    if (btnMCCSV) btnMCCSV.addEventListener('click', () => DataManager.export('corretiva'));
+    
+    const btnMcDeleteSel = document.getElementById('btnMcDeleteSel');
+    if (btnMcDeleteSel) btnMcDeleteSel.addEventListener('click', () => DataManager.deleteSelected('corretiva'));
+    
+    const btnMcDeleteAll = document.getElementById('btnMcDeleteAll');
+    if (btnMcDeleteAll) btnMcDeleteAll.addEventListener('click', () => DataManager.deleteAll('corretiva'));
+    
+    const mcRefresh = document.getElementById('mcRefresh');
+    if (mcRefresh) mcRefresh.addEventListener('click', () => DataManager.applyFilters('corretiva'));
+    
+    const mcClear = document.getElementById('mcClear');
+    if (mcClear) mcClear.addEventListener('click', () => DataManager.clearFilters('corretiva'));
+
+    // Manutenção Reprogramada
+    const inputMR = document.getElementById('inputMR');
+    if (inputMR) {
+      inputMR.addEventListener('change', async (e) => {
+        if (!e.target.files.length) return; 
+        Utils.showLoading();
+        const newRows = await DataManager.processFiles(e.target.files, 'reprogramada');
+        appState.reprogramada.data.push(...newRows); 
+        DataManager.save('reprogramada'); 
+        DataManager.applyFilters('reprogramada');
+        e.target.value = ''; 
+        Utils.hideLoading(); 
+        Utils.showAlert(`${newRows.length} registro(s) importado(s) com sucesso!`);
+      });
+    }
+    
+    const btnMRCSV = document.getElementById('btnMRCSV');
+    if (btnMRCSV) btnMRCSV.addEventListener('click', () => DataManager.export('reprogramada'));
+    
+    const btnMrDeleteSel = document.getElementById('btnMrDeleteSel');
+    if (btnMrDeleteSel) btnMrDeleteSel.addEventListener('click', () => DataManager.deleteSelected('reprogramada'));
+    
+    const btnMrDeleteAll = document.getElementById('btnMrDeleteAll');
+    if (btnMrDeleteAll) btnMrDeleteAll.addEventListener('click', () => DataManager.deleteAll('reprogramada'));
+    
+    const mrRefresh = document.getElementById('mrRefresh');
+    if (mrRefresh) mrRefresh.addEventListener('click', () => DataManager.applyFilters('reprogramada'));
+    
+    const mrClear = document.getElementById('mrClear');
+    if (mrClear) mrClear.addEventListener('click', () => DataManager.clearFilters('reprogramada'));
+
+    // Backup/Restore
+    const btnBackup = document.getElementById('btnBackup');
+    if (btnBackup) btnBackup.addEventListener('click', () => DataManager.backup());
+    
+    const restoreInput = document.getElementById('restoreInput');
+    if (restoreInput) {
+      restoreInput.addEventListener('change', async (e) => {
+        if (e.target.files.length) { 
+          await DataManager.restore(e.target.files[0]); 
+          e.target.value = ''; 
         }
+      });
+    }
+  },
+  
+  switchTab(tab) {
+    appState.currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    document.querySelectorAll('.tab-content').forEach(content => {
+      content.style.display = (content.id === 'tab-' + tab) ? 'block' : 'none';
+    });
+  },
+  
+  updateFilters(type) {
+    const prefix = type === 'preventiva' ? 'prev' : (type === 'manutencao' ? 'mp' : (type === 'corretiva' ? 'mc' : 'mr'));
+    const areaSel = document.getElementById(prefix + 'Area');
+    const tagSel = document.getElementById(prefix + 'Tag');
+    if (!areaSel || !tagSel) return;
 
-        function showMainApp(user) {
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('main-app').classList.remove('hidden');
-            document.getElementById('user-email').textContent = user.email;
-            renderApps();
-            
-            // Renderiza status dos sensores primeiro
-            renderSensorsStatus();
-            
-            // Inicia listeners com tratamento de erro
-            initSensorListeners();
-            
-            updateTime();
-            setInterval(updateTime, 60000);
-        }
+    const currentArea = areaSel.value;
+    const currentTag = tagSel.value;
+    const areas = [...new Set((appState[type].data || []).map(r => r.AREA).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR'));
+    const tags  = [...new Set((appState[type].data || []).map(r => r.TAG).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR'));
 
-        function updateTime() {
-            const now = new Date();
-            document.getElementById('current-time').textContent = 
-                now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        }
+    areaSel.innerHTML = '<option value="">Todas as áreas</option>' + areas.map(v => `<option value="${Utils.escapeHtml(String(v))}">${Utils.escapeHtml(String(v))}</option>`).join('');
+    tagSel.innerHTML  = '<option value="">Todas as tags</option>' + tags.map(v => `<option value="${Utils.escapeHtml(String(v))}">${Utils.escapeHtml(String(v))}</option>`).join('');
 
-        function logout() {
-            auth.signOut();
-        }
+    if (areas.includes(currentArea)) areaSel.value = currentArea;
+    if (tags.includes(currentTag)) tagSel.value = currentTag;
+  },
 
-        // ==========================================
-        // LISTENERS DOS SENSORES (CORRIGIDO - ORDEM DOS VALORES)
-        // ==========================================
-        function initSensorListeners() {
-            console.log('🎯 Iniciando listeners dos sensores...');
-            
-            Object.keys(sensors).forEach(sensorId => {
-                const sensorRef = database.ref('sensores/' + sensorId);
-                
-                // Remove listener anterior se existir
-                if (sensorListeners[sensorId]) {
-                    sensorRef.off('value', sensorListeners[sensorId]);
+  updateTable(type) {
+    const headId = (type === 'preventiva') ? 'preventivaHead' : 
+                   (type === 'manutencao') ? 'manutencaoHead' : 
+                   (type === 'corretiva') ? 'corretivaHead' : 
+                   'reprogramadaHead';
+    const bodyId = (type === 'preventiva') ? 'preventivaBody' : 
+                   (type === 'manutencao') ? 'manutencaoBody' : 
+                   (type === 'corretiva') ? 'corretivaBody' : 
+                   'reprogramadaBody';
+    const thead = document.getElementById(headId); 
+    const tbody = document.getElementById(bodyId);
+    if (!thead || !tbody) return;
+    
+    const rows = appState[type].filtered;
+    
+    if (!thead.children.length) {
+      thead.innerHTML = `
+        <th style="width: 40px;"><input type="checkbox" id="${type}CheckAll" class="form-check-input"></th>
+        <th>Data</th><th>Área</th><th>Tag</th><th>Especificação</th><th>Situação</th><th>Semana</th><th>OM</th>`;
+      const checkAll = document.getElementById(type + 'CheckAll');
+      if (checkAll) { 
+        checkAll.addEventListener('change', (e) => {
+          document.querySelectorAll('#' + bodyId + ' .rowChk').forEach(ch => {
+            ch.checked = e.target.checked;
+          });
+        }); 
+      }
+    }
+    
+    tbody.innerHTML = '';
+    for (const row of rows) {
+      const tr = document.createElement('tr');
+      let situacaoClass = '';
+      if (type === 'reprogramada') {
+        situacaoClass = 'badge-reprogramado';
+      } else {
+        situacaoClass = row.SITUACAO === 'REALIZADO' ? 'badge-realizado' : 
+                       (row.SITUACAO === 'NÃO REALIZADO' ? 'badge-nao-realizado' : 'badge-pendente');
+      }
+      tr.innerHTML = `
+        <td><input type="checkbox" class="form-check-input rowChk" data-id="${row._id}"></td>
+        <td>${Utils.formatDate(row.DATA)}</td>
+        <td>${row.AREA || '-'}</td>
+        <td>${row.TAG || '-'}</td>
+        <td style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${row.ESPECIFICACAO || '-'}">${row.ESPECIFICACAO || '-'}</td>
+        <td><span class="badge-status ${situacaoClass}">${row.SITUACAO || (type === 'reprogramada' ? 'REPROGRAMADO' : 'PENDENTE')}</span></td>
+        <td>${row.SEMANA || '-'}</td>
+        <td>${row.OM || '-'}</td>`;
+      tbody.appendChild(tr);
+    }
+    this.updateFilterOptions(type);
+  },
+  
+  updateFilterOptions(type) {
+    const prefix = type === 'preventiva' ? 'prev' : 
+                   (type === 'manutencao' ? 'mp' : 
+                   (type === 'corretiva' ? 'mc' : 'mr'));
+    const data = appState[type].data;
+    const areas = Utils.unique(data.map(r => r.AREA).filter(Boolean)).sort();
+    const tags  = Utils.unique(data.map(r => r.TAG).filter(Boolean)).sort();
+    const areaSelect = document.getElementById(prefix + 'Area');
+    const tagSelect  = document.getElementById(prefix + 'Tag');
+    if (!areaSelect || !tagSelect) return;
+    
+    const currentArea = areaSelect.value; 
+    const currentTag = tagSelect.value;
+    
+    areaSelect.innerHTML = '<option value="">Todas</option>';
+    for (const area of areas) { 
+      const o = document.createElement('option'); 
+      o.value = area; 
+      o.textContent = area; 
+      if (area === currentArea) o.selected = true; 
+      areaSelect.appendChild(o); 
+    }
+    
+    tagSelect.innerHTML = '<option value="">Todas</option>';
+    for (const tag of tags) { 
+      const o = document.createElement('option'); 
+      o.value = tag; 
+      o.textContent = tag; 
+      if (tag === currentTag) o.selected = true; 
+      tagSelect.appendChild(o); 
+    }
+  },
+  
+  updateKPIs(type) {
+    const K = type === 'preventiva' ? 'Prev' : 
+              (type === 'manutencao' ? 'Mp' : 
+              (type === 'corretiva' ? 'Mc' : 'Mr'));
+    const data = appState[type].filtered;
+    const total = data.length;
+    const areas = Utils.unique(data.map(r => r.AREA).filter(Boolean)).length;
+    const tags  = Utils.unique(data.map(r => r.TAG).filter(Boolean)).length;
+    
+    if (type === 'reprogramada') {
+      const reprogramados = data.filter(r => r.SITUACAO === 'REPROGRAMADO').length;
+      const realizados = data.filter(r => r.SITUACAO === 'REALIZADO').length;
+      const pendentes = total - realizados - reprogramados;
+      const percentRealizado = total > 0 ? Math.round((realizados / total) * 100) : 0;
+      
+      const elCount = document.getElementById('kpi' + K + 'Count');
+      if (elCount) elCount.textContent = total;
+      
+      const elAreas = document.getElementById('kpi' + K + 'Areas');
+      if (elAreas) elAreas.textContent = areas;
+      
+      const elTags = document.getElementById('kpi' + K + 'Tags');
+      if (elTags) elTags.textContent = tags;
+      
+      const elRate = document.getElementById('kpi' + K + 'Rate');
+      if (elRate) elRate.textContent = percentRealizado + '%';
+      
+      const elDone = document.getElementById('kpi' + K + 'Done');
+      if (elDone) elDone.textContent = realizados;
+      
+      const elPending = document.getElementById('kpi' + K + 'Pending');
+      if (elPending) elPending.textContent = pendentes;
+      
+      const elReprogramado = document.getElementById('kpi' + K + 'Reprogramado');
+      if (elReprogramado) elReprogramado.textContent = reprogramados;
+    } else {
+      const realizados = data.filter(r => r.SITUACAO === 'REALIZADO').length;
+      const naoRealizados = data.filter(r => r.SITUACAO === 'NÃO REALIZADO').length;
+      const pendentes = total - realizados - naoRealizados;
+      const percentRealizado = total > 0 ? Math.round((realizados / total) * 100) : 0;
+      
+      const elCount = document.getElementById('kpi' + K + 'Count');
+      if (elCount) elCount.textContent = total;
+      
+      const elAreas = document.getElementById('kpi' + K + 'Areas');
+      if (elAreas) elAreas.textContent = areas;
+      
+      const elTags = document.getElementById('kpi' + K + 'Tags');
+      if (elTags) elTags.textContent = tags;
+      
+      const elRate = document.getElementById('kpi' + K + 'Rate');
+      if (elRate) elRate.textContent = percentRealizado + '%';
+      
+      const elDone = document.getElementById('kpi' + K + 'Done');
+      if (elDone) elDone.textContent = realizados;
+      
+      const elPending = document.getElementById('kpi' + K + 'Pending');
+      if (elPending) elPending.textContent = pendentes;
+      
+      const elNotDone = document.getElementById('kpi' + K + 'NotDone');
+      if (elNotDone) elNotDone.textContent = naoRealizados;
+    }
+  },
+  
+  updateCharts(type) {
+    const prefix = type === 'preventiva' ? 'prev' : 
+                   (type === 'manutencao' ? 'mp' : 
+                   (type === 'corretiva' ? 'mc' : 'mr'));
+    const data = appState[type].filtered;
+    this.updateByAreaChart(type, prefix, data);
+    this.updateTimelineChart(type, prefix, data);
+    this.updateParetoChart(type, prefix, data);
+    this.updateStatusChart(type, prefix, data);
+  },
+  
+  updateByAreaChart(type, prefix, data) {
+    const canvas = document.getElementById(prefix + 'ByArea'); 
+    if (!canvas) return; 
+    const ctx = canvas.getContext('2d');
+    if (appState[type].charts.byArea) appState[type].charts.byArea.destroy();
+    
+    const areaCount = {}; 
+    for (const row of data) { 
+      const a = row.AREA || 'Sem Área'; 
+      areaCount[a] = (areaCount[a] || 0) + 1; 
+    }
+    const labels = Object.keys(areaCount).sort(); 
+    const values = labels.map(l => areaCount[l]);
+    
+    appState[type].charts.byArea = new Chart(ctx, {
+      type: 'bar', 
+      data: { 
+        labels, 
+        datasets: [{ 
+          label: 'Quantidade', 
+          data: values, 
+          backgroundColor: CONFIG.COLORS.brand, 
+          borderColor: CONFIG.COLORS.brand, 
+          borderWidth: 1 
+        }] 
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        plugins: { legend: { display: false } }, 
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } 
+      }
+    });
+  },
+  
+  updateTimelineChart(type, prefix, data) {
+    const canvas = document.getElementById(prefix + 'Timeline'); 
+    if (!canvas) return; 
+    const ctx = canvas.getContext('2d');
+    if (appState[type].charts.timeline) appState[type].charts.timeline.destroy();
+    
+    const dateCount = {}; 
+    for (const row of data) { 
+      if (!row.DATA) continue; 
+      const ds = Utils.formatDate(row.DATA); 
+      dateCount[ds] = (dateCount[ds] || 0) + 1; 
+    }
+    const labels = Object.keys(dateCount).sort((a, b) => {
+      const [dA, mA, yA] = a.split('/');
+      const [dB, mB, yB] = b.split('/');
+      return new Date(yA, mA - 1, dA) - new Date(yB, mB - 1, dB);
+    });
+    const values = labels.map(l => dateCount[l]);
+    
+    appState[type].charts.timeline = new Chart(ctx, {
+      type: 'line',
+      data: { 
+        labels, 
+        datasets: [{ 
+          label: 'Atividades', 
+          data: values, 
+          backgroundColor: 'rgba(26, 160, 109, 0.2)', 
+          borderColor: CONFIG.COLORS.accent, 
+          borderWidth: 2, 
+          fill: true, 
+          tension: 0.4 
+        }] 
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        plugins: { legend: { display: false } }, 
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } 
+      }
+    });
+  },
+  
+  updateParetoChart(type, prefix, data) {
+    const canvas = document.getElementById(prefix + 'Pareto'); 
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (appState[type].charts.pareto) appState[type].charts.pareto.destroy();
+    
+    const tagCount = {}; 
+    for (const row of data) { 
+      const t = row.TAG || 'Sem Tag'; 
+      tagCount[t] = (tagCount[t] || 0) + 1; 
+    }
+    
+    const sorted = Object.entries(tagCount).sort((a, b) => b[1] - a[1]);
+    const labels = sorted.map(t => t[0]); 
+    const values = sorted.map(t => t[1]);
+    const total = values.reduce((s, v) => s + v, 0); 
+    const cumulative = []; 
+    let sum = 0; 
+    for(const v of values) { 
+      sum += v; 
+      cumulative.push((sum / total) * 100); 
+    }
+    
+    appState[type].charts.pareto = new Chart(ctx, {
+      type: 'bar',
+      data: { 
+        labels, 
+        datasets: [
+          { 
+            label: 'Quantidade', 
+            data: values, 
+            backgroundColor: CONFIG.COLORS.brand, 
+            borderColor: CONFIG.COLORS.brand, 
+            borderWidth: 1, 
+            yAxisID: 'y' 
+          },
+          { 
+            label: '% Acumulado', 
+            data: cumulative, 
+            type: 'line', 
+            borderColor: CONFIG.COLORS.danger, 
+            backgroundColor: 'rgba(239, 68, 68, 0.1)', 
+            borderWidth: 2, 
+            fill: false, 
+            yAxisID: 'y1' 
+          }
+        ]
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        plugins: { 
+          legend: { display: true, position: 'top' },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) {
+                  label += ': ';
                 }
-                
-                // Cria novo listener
-                sensorListeners[sensorId] = sensorRef.on('value', (snapshot) => {
-                    const data = snapshot.val();
-                    if (data) {
-                        console.log(`📡 Sensor ${sensorId}: dados recebidos`);
-                        updateSensorCard(sensorId, data);
-                    } else {
-                        console.log(`⚠️ Sensor ${sensorId}: sem dados`);
-                        setSensorOffline(sensorId);
-                    }
-                }, (error) => {
-                    console.error(`❌ Erro no sensor ${sensorId}:`, error);
-                    setSensorOffline(sensorId);
-                });
-            });
-            
-            // Força atualização após 2 segundos
-            setTimeout(() => {
-                console.log('🔄 Forçando atualização dos sensores...');
-                Object.keys(sensors).forEach(sensorId => {
-                    database.ref('sensores/' + sensorId).once('value')
-                        .then(snapshot => {
-                            if (snapshot.exists()) {
-                                updateSensorCard(sensorId, snapshot.val());
-                            }
-                        });
-                });
-            }, 2000);
-        }
-
-        function updateSensorCard(sensorId, data) {
-            if (!data) return;
-            
-            const config = sensors[sensorId];
-            const now = Date.now();
-            
-            // Pega timestamp (pode estar em lugares diferentes)
-            const dataTimestamp = data.timestamp || data.lastUpdate || 0;
-            const isRecent = dataTimestamp && (now - dataTimestamp) < 120000; // 2 minutos
-            
-            // Atualiza status
-            const statusEl = document.getElementById('status-' + sensorId);
-            const updateEl = document.getElementById('update-' + sensorId);
-            
-            if (statusEl && updateEl) {
-                if (dataTimestamp && isRecent) {
-                    statusEl.textContent = 'ONLINE';
-                    statusEl.className = 'sensor-status online';
-                    updateEl.textContent = new Date(dataTimestamp).toLocaleTimeString('pt-BR');
-                } else if (dataTimestamp) {
-                    statusEl.textContent = 'ATRASADO';
-                    statusEl.className = 'sensor-status offline';
-                    updateEl.textContent = new Date(dataTimestamp).toLocaleTimeString('pt-BR');
-                } else {
-                    statusEl.textContent = 'SEM DADOS';
-                    statusEl.className = 'sensor-status offline';
-                    updateEl.textContent = '--:--:--';
+                if (context.parsed.y !== null) {
+                  if (context.datasetIndex === 0) {
+                    label += context.parsed.y + ' OMs';
+                  } else {
+                    label += context.parsed.y.toFixed(1) + '%';
+                  }
                 }
+                return label;
+              }
             }
-            
-            // Extrai valores do sensor
-            // Formato esperado: [total, realizados, pendentes]
-            let valores = data.valores || [0, 0, 0];
-            
-            // 🔥 CORREÇÃO: Garantir a ordem correta dos valores
-            let total = parseFloat(valores[0]) || 0;
-            let realizados = parseFloat(valores[1]) || 0;
-            let pendentes = parseFloat(valores[2]) || 0;
-            
-            // Calcula valor para o gauge (% de conclusão baseado nos realizados)
-            let mainValue = total > 0 ? (realizados / total) * 100 : 0;
-            
-            // Atualiza gauge
-            const gauge = document.getElementById('gauge-' + sensorId);
-            const valueEl = document.getElementById('value-' + sensorId);
-            
-            if (gauge && valueEl) {
-                const circumference = 534;
-                const offset = circumference - (Math.min(100, mainValue) / 100) * (circumference * 0.75);
-                gauge.style.strokeDashoffset = offset;
-                gauge.setAttribute('data-value', mainValue);
-                valueEl.textContent = mainValue.toFixed(1);
+          }
+        },
+        scales: { 
+          y: { 
+            type: 'linear', 
+            position: 'left', 
+            beginAtZero: true, 
+            ticks: { precision: 0 } 
+          },
+          y1: { 
+            type: 'linear', 
+            position: 'right', 
+            beginAtZero: true, 
+            max: 100, 
+            grid: { drawOnChartArea: false }, 
+            ticks: { callback: (v) => v + '%' } 
+          },
+          x: {
+            ticks: {
+              maxRotation: 45,
+              minRotation: 45
             }
-            
-            // 🔥 CORREÇÃO: Atualiza os três valores na ordem correta
-            // val1 = Total
-            // val2 = Realizados
-            // val3 = Pendentes
-            const val1El = document.getElementById('val1-' + sensorId);
-            const val2El = document.getElementById('val2-' + sensorId);
-            const val3El = document.getElementById('val3-' + sensorId);
-            
-            if (val1El) val1El.textContent = total;
-            if (val2El) val2El.textContent = realizados;
-            if (val3El) val3El.textContent = pendentes;
-
-            // Caso especial SENF (pode ter formato diferente)
-            if (sensorId === 'senf' && data.dadosCompletos && document.getElementById('diff-senf')) {
-                const diff = parseFloat(data.dadosCompletos.diferenca || 0);
-                document.getElementById('diff-senf').textContent =
-                    Number.isInteger(diff) ? String(diff) : diff.toFixed(1);
-            }
-
-            // Atualiza grid de status
-            updateSensorsStatusGrid(sensorId, isRecent, mainValue);
+          }
+        } 
+      }
+    });
+  },
+  
+  updateStatusChart(type, prefix, data) {
+    const canvas = document.getElementById(prefix + 'Status'); 
+    if (!canvas) return; 
+    const ctx = canvas.getContext('2d');
+    if (appState[type].charts.status) appState[type].charts.status.destroy();
+    
+    if (type === 'reprogramada') {
+      const reprogramados = data.filter(r => r.SITUACAO === 'REPROGRAMADO').length;
+      const realizados = data.filter(r => r.SITUACAO === 'REALIZADO').length;
+      const pendentes = data.length - realizados - reprogramados;
+      
+      appState[type].charts.status = new Chart(ctx, {
+        type: 'doughnut',
+        data: { 
+          labels: ['Realizado', 'Reprogramado', 'Pendente'], 
+          datasets: [{ 
+            data: [realizados, reprogramados, pendentes], 
+            backgroundColor: [CONFIG.COLORS.success, CONFIG.COLORS.reprogramado, CONFIG.COLORS.warning], 
+            borderWidth: 2, 
+            borderColor: '#fff' 
+          }] 
+        },
+        options: { 
+          responsive: true, 
+          maintainAspectRatio: false, 
+          plugins: { legend: { display: true, position: 'bottom' } } 
         }
-
-        function setSensorOffline(sensorId) {
-            const statusEl = document.getElementById('status-' + sensorId);
-            if (statusEl) {
-                statusEl.textContent = 'OFFLINE';
-                statusEl.className = 'sensor-status offline';
-            }
-            
-            const updateEl = document.getElementById('update-' + sensorId);
-            if (updateEl) {
-                updateEl.textContent = '--:--:--';
-            }
-            
-            updateSensorsStatusGrid(sensorId, false, 0);
+      });
+    } else {
+      const realizados = data.filter(r => r.SITUACAO === 'REALIZADO').length;
+      const naoRealizados = data.filter(r => r.SITUACAO === 'NÃO REALIZADO').length;
+      const pendentes = data.length - realizados - naoRealizados;
+      
+      appState[type].charts.status = new Chart(ctx, {
+        type: 'doughnut',
+        data: { 
+          labels: ['Realizado', 'Não Realizado', 'Pendente'], 
+          datasets: [{ 
+            data: [realizados, naoRealizados, pendentes], 
+            backgroundColor: [CONFIG.COLORS.success, CONFIG.COLORS.danger, CONFIG.COLORS.warning], 
+            borderWidth: 2, 
+            borderColor: '#fff' 
+          }] 
+        },
+        options: { 
+          responsive: true, 
+          maintainAspectRatio: false, 
+          plugins: { legend: { display: true, position: 'bottom' } } 
         }
+      });
+    }
+  }
+};
 
-        function renderSensorsStatus() {
-            const grid = document.getElementById('sensors-status-grid');
-            if (!grid) return;
-            
-            grid.innerHTML = Object.keys(sensors).map(id => `
-                <div class="flex items-center gap-2 p-2 rounded bg-mining-800/30 border border-mining-700" id="status-item-${id}">
-                    <div class="w-2 h-2 rounded-full bg-slate-500" id="status-dot-${id}"></div>
-                    <div class="flex-1">
-                        <div class="text-xs text-white font-medium">${sensors[id].name}</div>
-                        <div class="text-[10px] text-slate-400" id="status-text-${id}">Aguardando...</div>
-                    </div>
-                </div>
-            `).join('');
-        }
+// ==================== INICIALIZAÇÃO ====================
+document.addEventListener('DOMContentLoaded', () => { 
+  UI.init(); 
+});
+</script>
 
-        function updateSensorsStatusGrid(sensorId, isOnline, value) {
-            const dot = document.getElementById('status-dot-' + sensorId);
-            const text = document.getElementById('status-text-' + sensorId);
-            
-            if (dot && text) {
-                if (isOnline) {
-                    dot.className = 'w-2 h-2 rounded-full bg-emerald-500 status-pulse';
-                    text.textContent = value.toFixed(1) + '%';
-                    text.className = 'text-[10px] text-emerald-400';
-                } else {
-                    dot.className = 'w-2 h-2 rounded-full bg-red-500';
-                    text.textContent = 'Offline';
-                    text.className = 'text-[10px] text-red-400';
-                }
-            }
-            
-            // Atualiza contador geral
-            const onlineCount = Object.keys(sensors).filter(id => {
-                const dot = document.getElementById('status-dot-' + id);
-                return dot && dot.classList.contains('bg-emerald-500');
-            }).length;
-            
-            const systemStatus = document.getElementById('system-status');
-            if (systemStatus) {
-                systemStatus.textContent = `${onlineCount}/${Object.keys(sensors).length} sensores online`;
-            }
-        }
+<!-- Export PNG Paginado -->
+<script>
+(function(){
+  if (!window.Utils) { window.Utils = {}; }
 
-        // ==========================================
-        // UI COMPONENTS
-        // ==========================================
-        function renderApps(filter = '') {
-            const container = document.getElementById('apps-container');
-            container.innerHTML = '';
-            
-            const filtered = apps.filter(app => 
-                app.name.toLowerCase().includes(filter.toLowerCase()) ||
-                app.group.toLowerCase().includes(filter.toLowerCase())
-            );
+  function grabCanvasDataURL(el){ try{return el.toDataURL('image/png');}catch(e){return null;} }
 
-            let currentGroup = '';
-            
-            filtered.forEach(app => {
-                if (app.group !== currentGroup) {
-                    currentGroup = app.group;
-                    const groupDiv = document.createElement('div');
-                    groupDiv.className = 'px-2 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mt-2 first:mt-0';
-                    groupDiv.textContent = currentGroup;
-                    container.appendChild(groupDiv);
-                }
-                
-                const btn = document.createElement('button');
-                btn.className = `app-card w-full text-left p-3 rounded-lg border-l-4 border-transparent hover:bg-mining-800/50 group ${currentApp?.id === app.id ? 'bg-mining-800/50 border-mining-accent' : ''}`;
-                btn.onclick = () => loadApp(app);
-                
-                btn.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg bg-mining-800 flex items-center justify-center flex-shrink-0 text-slate-400 group-hover:text-mining-accent transition-colors">
-                            <i class="ph ${app.icon} text-xl"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="text-sm font-medium text-white truncate">${app.name}</div>
-                            <div class="text-xs font-mono text-slate-500">${app.short}</div>
-                        </div>
-                    </div>
-                `;
-                
-                container.appendChild(btn);
-            });
-        }
+  function buildFirstPage(type){
+    const now = new Date();
+    const map = { 
+      preventiva: {prefix: 'prev', K: 'Prev', title: 'Programação Preventiva'}, 
+      manutencao: {prefix: 'mp', K: 'Mp', title: 'Manutenção Programada'}, 
+      corretiva: {prefix: 'mc', K: 'Mc', title: 'Manutenção Corretiva'},
+      reprogramada: {prefix: 'mr', K: 'Mr', title: 'Manutenção Reprogramada'} 
+    };
+    const cfg = map[type]; 
+    const prefix = cfg.prefix; 
+    const K = cfg.K;
 
-        function loadApp(app) {
-            currentApp = app;
-            
-            document.getElementById('current-module-info').classList.remove('hidden');
-            document.getElementById('current-short').textContent = app.short;
-            document.getElementById('current-name').textContent = app.name;
-            document.getElementById('action-buttons').style.display = 'flex';
-            
-            document.getElementById('home-view').classList.add('hidden');
-            document.getElementById('iframe-view').classList.remove('hidden');
-            
-            const iframe = document.getElementById('app-iframe');
-            iframe.src = app.url;
-            
-            iframe.onload = function() {
-                console.log(`✅ ${app.name} carregado`);
-            };
-            
-            renderApps(document.getElementById('search-apps').value);
-        }
+    const kpis = {
+      total: (document.getElementById('kpi' + K + 'Count') || {}).textContent || '0',
+      areas: (document.getElementById('kpi' + K + 'Areas') || {}).textContent || '0',
+      tags : (document.getElementById('kpi' + K + 'Tags') || {}).textContent || '0',
+      rate : (document.getElementById('kpi' + K + 'Rate') || {}).textContent || '0%'
+    };
 
-        function showHome() {
-            currentApp = null;
-            document.getElementById('home-view').classList.remove('hidden');
-            document.getElementById('iframe-view').classList.add('hidden');
-            document.getElementById('current-module-info').classList.add('hidden');
-            document.getElementById('action-buttons').style.display = 'none';
-            document.getElementById('app-iframe').src = '';
-            renderApps(document.getElementById('search-apps').value);
-        }
+    const canvases = [
+      { id: prefix + 'ByArea',   title: 'Distribuição por Área' },
+      { id: prefix + 'Timeline', title: 'Linha do Tempo' },
+      { id: prefix + 'Pareto',   title: 'Pareto por Tag' },
+      { id: prefix + 'Status',   title: 'Status das Atividades' },
+    ].map(c => ({ title: c.title, data: (document.getElementById(c.id) ? grabCanvasDataURL(document.getElementById(c.id)) : null) }))
+     .filter(x => !!x.data);
 
-        function backToPortal() {
-            showHome();
-        }
+    const root = document.createElement('div'); 
+    root.className = 'page-capture';
+    const header = document.createElement('div'); 
+    header.className = 'page-row';
+    header.innerHTML = `
+      <div class="page-col">
+        <h2 class="page-title">Dashboard Samarco — ${cfg.title}</h2>
+        <p class="page-sub">Cabeçalho e Gráficos • ${now.toLocaleDateString()} ${now.toLocaleTimeString()}</p>
+      </div>
+      <div class="page-col" style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+        <div class="kpi"><div class="label">Total</div><div class="value">${kpis.total}</div></div>
+        <div class="kpi"><div class="label">Áreas</div><div class="value">${kpis.areas}</div></div>
+        <div class="kpi"><div class="label">Tags</div><div class="value">${kpis.tags}</div></div>
+        <div class="kpi"><div class="label">% Realizado</div><div class="value">${kpis.rate}</div></div>
+      </div>`;
+    root.appendChild(header);
 
-        function openDirect() {
-            if (currentApp) {
-                window.open(currentApp.url, '_blank');
-            }
-        }
+    const grid = document.createElement('div'); 
+    grid.className = 'chart-grid';
+    canvases.forEach(c => { 
+      const card = document.createElement('div'); 
+      card.className = 'chart-card'; 
+      const h = document.createElement('h6'); 
+      h.textContent = c.title; 
+      const img = document.createElement('img'); 
+      img.className = 'chart-img'; 
+      img.src = c.data; 
+      card.appendChild(h); 
+      card.appendChild(img); 
+      grid.appendChild(card); 
+    });
+    root.appendChild(grid);
 
-        document.getElementById('search-apps').addEventListener('input', (e) => {
-            renderApps(e.target.value);
+    const foot = document.createElement('div'); 
+    foot.className = 'page-footer'; 
+    foot.innerHTML = '<span>Página 1</span><span>Gerado automaticamente</span>'; 
+    root.appendChild(foot);
+    return root;
+  }
+
+  function buildTablePages(type){
+    const pages = [];
+    const headId = (type === 'preventiva') ? 'preventivaHead' : 
+                   (type === 'manutencao') ? 'manutencaoHead' : 
+                   (type === 'corretiva') ? 'corretivaHead' : 
+                   'reprogramadaHead';
+    const bodyId = (type === 'preventiva') ? 'preventivaBody' : 
+                   (type === 'manutencao') ? 'manutencaoBody' : 
+                   (type === 'corretiva') ? 'corretivaBody' : 
+                   'reprogramadaBody';
+    const head = document.getElementById(headId);
+    const tbody = document.getElementById(bodyId);
+    if (!head || !tbody) return pages;
+
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const perPage = 10;
+
+    for (let i = 0; i < rows.length; i += perPage){
+      const slice = rows.slice(i, i + perPage);
+      const page = document.createElement('div'); 
+      page.className = 'page-capture';
+      const titleWrap = document.createElement('div');
+      const tabTitle = (type === 'preventiva' ? 'Programação Preventiva' : 
+                       type === 'manutencao' ? 'Manutenção Programada' : 
+                       type === 'corretiva' ? 'Manutenção Corretiva' : 
+                       'Manutenção Reprogramada');
+      titleWrap.innerHTML = '<h2 class="page-title">OMs — ' + tabTitle + '</h2>' + 
+                            '<p class="page-sub">Listagem contínua (paisagem)</p>';
+      page.appendChild(titleWrap);
+
+      const table = document.createElement('table'); 
+      table.className = 'table-mini';
+      const thead = document.createElement('thead'); 
+      const trh = document.createElement('tr');
+      Array.from(head.children).forEach(th => { 
+        const t = document.createElement('th'); 
+        t.textContent = th.textContent.trim(); 
+        trh.appendChild(t); 
+      });
+      thead.appendChild(trh); 
+      table.appendChild(thead);
+
+      const tb = document.createElement('tbody');
+      slice.forEach(tr => {
+        const ntr = document.createElement('tr');
+        Array.from(tr.children).forEach(td => {
+          const c = document.createElement('td');
+          if (td.querySelector('input[type="checkbox"]')) { 
+            c.textContent = '•'; 
+          } else { 
+            c.textContent = (td.textContent || '').trim(); 
+          }
+          ntr.appendChild(c);
         });
+        tb.appendChild(ntr);
+      });
+      table.appendChild(tb); 
+      page.appendChild(table);
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && currentApp) showHome();
-        });
-    </script>
+      const foot = document.createElement('div'); 
+      foot.className = 'page-footer';
+      const pageNum = (i / perPage) + 2; 
+      foot.innerHTML = '<span>Página ' + pageNum + '</span><span>Gerado automaticamente</span>';
+      page.appendChild(foot);
+
+      pages.push(page);
+    }
+    return pages;
+  }
+
+  async function renderNodeToPNG(node, filename){
+    const off = document.getElementById('_offscreen_pageroot') || (function(){
+      const d = document.createElement('div'); 
+      d.id = '_offscreen_pageroot'; 
+      d.style.position = 'fixed'; 
+      d.style.left = '-99999px'; 
+      d.style.top = '-99999px'; 
+      d.style.width = '0'; 
+      d.style.height = '0'; 
+      d.style.overflow = 'hidden'; 
+      document.body.appendChild(d); 
+      return d;
+    })();
+    off.appendChild(node);
+    try {
+      const canvas = await html2canvas(node, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' });
+      const a = document.createElement('a'); 
+      a.download = filename; 
+      a.href = canvas.toDataURL('image/png'); 
+      a.click();
+    } finally { 
+      if (node.parentNode === off) off.removeChild(node); 
+    }
+  }
+
+  async function exportDashboardPNG(type){
+    if (Utils.showLoading) Utils.showLoading();
+    try{
+      const base = type + '_' + new Date().toISOString().split('T')[0];
+      const p1 = buildFirstPage(type); 
+      await renderNodeToPNG(p1, base + '_p1.png');
+      const tables = buildTablePages(type);
+      for (let i = 0; i < tables.length; i++) { 
+        await renderNodeToPNG(tables[i], base + '_p' + (i + 2) + '.png'); 
+      }
+    } finally { 
+      if (Utils.hideLoading) Utils.hideLoading(); 
+    }
+  }
+
+  window.addEventListener('load', function(){
+    const bPrev = document.getElementById('btnPrevExportPNG');
+    const bMp   = document.getElementById('btnMPExportPNG');
+    const bMc   = document.getElementById('btnMCExportPNG');
+    const bMr   = document.getElementById('btnMRExportPNG');
+    if (bPrev) bPrev.onclick = () => exportDashboardPNG('preventiva');
+    if (bMp)   bMp.onclick   = () => exportDashboardPNG('manutencao');
+    if (bMc)   bMc.onclick   = () => exportDashboardPNG('corretiva');
+    if (bMr)   bMr.onclick   = () => exportDashboardPNG('reprogramada');
+  });
+})();
+</script>
 </body>
 </html>
